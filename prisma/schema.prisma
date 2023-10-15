@@ -1,0 +1,164 @@
+datasource db {
+  url      = env("DATABASE_URL")
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model user {
+  id            Int            @id @default(autoincrement())
+  username      String         @unique
+  name          String
+  role          role           @default(USER)
+  password      String
+  email         String         @unique
+  resetToken    String?
+  isActivated   Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  bannedAt      DateTime?
+  verifyToken   String?
+  isVerified    Boolean        @default(false)
+  verifiedAt    DateTime?
+  posts         post[]
+  comments      comment[]
+  visits        visit[]
+  notifications notification[]
+  reports       report[]
+  postVotes     post_vote[]
+  commentVotes  comment_vote[]
+}
+
+model post {
+  id         Int         @id @default(autoincrement())
+  title      String
+  body       String
+  userId     Int
+  status     post_status @default(PENDING)
+  createdAt  DateTime    @default(now())
+  upvote     Int         @default(0)
+  downvote   Int         @default(0)
+  deletedAt  DateTime?
+  categoryId Int?
+
+  author user @relation(fields: [userId], references: [id])
+
+  subcategoryIds subcategory[]
+  comments       comment[]
+  visits         visit[]
+  postVotes      post_vote[]
+  changeRequests change_request[]
+  Category       category?        @relation(fields: [categoryId], references: [id])
+  Report         report[]
+}
+
+model category {
+  id            Int           @id @default(autoincrement())
+  name          String
+  createdAt     DateTime      @default(now())
+  posts         post[]
+  subcategories subcategory[]
+}
+
+model subcategory {
+  id         Int       @id @default(autoincrement())
+  name       String
+  categoryId Int
+  createdAt  DateTime? @default(now())
+  posts      post[]
+  Category   category  @relation(fields: [categoryId], references: [id])
+}
+
+model comment {
+  id              Int            @id @default(autoincrement())
+  text            String
+  userId          Int
+  postId          Int
+  upvote          Int            @default(0)
+  downvote        Int            @default(0)
+  parentCommentId Int?
+  createdAt       DateTime       @default(now())
+  user            user           @relation(fields: [userId], references: [id])
+  post            post           @relation(fields: [postId], references: [id])
+  parentComment   comment?       @relation("CommentToComment", fields: [parentCommentId], references: [id])
+  childComments   comment[]      @relation("CommentToComment")
+  commentVotes    comment_vote[]
+}
+
+model visit {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  postId     Int
+  percentage Int      @default(0)
+  visitAt    DateTime @default(now())
+  user       user     @relation(fields: [userId], references: [id])
+  post       post     @relation(fields: [postId], references: [id])
+}
+
+model notification {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      user      @relation(fields: [userId], references: [id])
+}
+
+model report {
+  id        Int           @id @default(autoincrement())
+  userId    Int
+  postId    Int
+  reason    String
+  status    report_status @default(PEDNING)
+  createdAt DateTime      @default(now())
+  user      user          @relation(fields: [userId], references: [id])
+  post      post          @relation(fields: [postId], references: [id])
+}
+
+model post_vote {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  postId    Int
+  positive  Boolean
+  createdAt DateTime @default(now())
+  user      user     @relation(fields: [userId], references: [id])
+  post      post     @relation(fields: [postId], references: [id])
+}
+
+model comment_vote {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  commentId Int
+  positive  Boolean
+  createdAt DateTime @default(now())
+  user      user     @relation(fields: [userId], references: [id])
+  comment   comment  @relation(fields: [commentId], references: [id])
+}
+
+model change_request {
+  id           Int         @id @default(autoincrement())
+  postId       Int
+  reason       String
+  targetStatus post_status
+  createdAt    DateTime    @default(now())
+  post         post        @relation(fields: [postId], references: [id])
+}
+
+enum role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum post_status {
+  PENDING
+  DELETED
+  ACTIVE
+  DENIED
+}
+
+enum report_status {
+  PEDNING
+  PROCESSING
+  RESOLVED
+}
