@@ -15,7 +15,7 @@ model user {
   password      String
   email         String         @unique
   resetToken    String?
-  isActivated   Boolean        @default(true)
+  avatarUrl     String?
   createdAt     DateTime       @default(now())
   bannedAt      DateTime?
   verifyToken   String?

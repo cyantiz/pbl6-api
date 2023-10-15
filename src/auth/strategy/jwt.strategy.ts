@@ -19,7 +19,6 @@ export class UserStrategy extends PassportStrategy(Strategy, 'user') {
       where: {
         email: payload.email,
         bannedAt: null,
-        isActivated: true,
       },
     });
 
@@ -49,7 +48,6 @@ export class ModeratorStrategy extends PassportStrategy(Strategy, 'moderator') {
       where: {
         email: payload.email,
         bannedAt: null,
-        isActivated: true,
       },
     });
 
@@ -74,7 +72,6 @@ export class AdminStrategy extends PassportStrategy(Strategy, 'admin') {
       where: {
         email: payload.email,
         bannedAt: null,
-        isActivated: true,
       },
     });
 

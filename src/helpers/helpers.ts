@@ -2,15 +2,17 @@ import { plainToInstance } from 'class-transformer';
 
 export const sensitiveFields = [
   'bannedAt',
-  'isDeleted',
   'verifiedAt',
+  'isVerified',
   'createdAt',
   'role',
+  'password',
+  'email',
+  'id',
 ];
 
 export const ErrorMessages = {
   AUTH: {
-    USER_INACTIVE: 'This user has been deactivated',
     USER_BANNED: 'This user has been banned',
     CREDENTIALS_INCORRECT: 'Credentials incorrect',
     INVALID_TOKEN: 'Invalid token',

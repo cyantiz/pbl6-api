@@ -67,8 +67,6 @@ export class AuthService {
       throw new ForbiddenException(ErrorMessages.AUTH.CREDENTIALS_INCORRECT);
     if (user.bannedAt)
       throw new ForbiddenException(ErrorMessages.AUTH.USER_BANNED);
-    if (!user.isActivated)
-      throw new ForbiddenException(ErrorMessages.AUTH.USER_INACTIVE);
 
     const passwordMatches = await argon.verify(user.password, dto.password);
 
