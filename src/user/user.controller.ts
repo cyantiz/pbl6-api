@@ -19,11 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { user } from '@prisma/client';
 import { GetUser } from 'src/auth/decorator/get-user.decorator';
-import {
-  AdminGuard,
-  UserGuard,
-  ModeratorGuard,
-} from 'src/auth/guard/auth.guard';
+import { AdminGuard, UserGuard } from 'src/auth/guard/auth.guard';
 import { APISummaries } from 'src/helpers/helpers';
 import { PageDto } from 'src/prisma/helper/prisma.helper';
 import { BanUserDto, UpdateUserDto } from './dto/user.dto';
