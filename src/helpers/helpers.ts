@@ -30,6 +30,9 @@ export const ErrorMessages = {
     USER_INVALID: 'User invalid',
     USER_INACTIVE: 'Please activate this user first',
   },
+  POST: {
+    POST_NOT_FOUND: 'Post not found',
+  },
 };
 
 export const APISummaries = {
