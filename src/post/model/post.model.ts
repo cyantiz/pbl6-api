@@ -19,7 +19,7 @@ export class PostModel {
   userId: number;
 
   @Expose()
-  @ApiProperty({ type: PostStatus })
+  @ApiProperty({ type: String })
   status: string;
 
   @Expose()
