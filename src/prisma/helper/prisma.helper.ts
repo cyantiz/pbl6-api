@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 
 export const PaginationHandle = (
   query: object,
@@ -42,4 +42,10 @@ export class PageDto {
     required: false,
   })
   pageSize: number = null;
+}
+
+export class MessageModel {
+  @Type(() => String)
+  @Expose()
+  message: string = null;
 }

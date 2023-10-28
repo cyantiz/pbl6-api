@@ -8,66 +8,68 @@ generator client {
 }
 
 model user {
-  id            Int            @id @default(autoincrement())
-  username      String         @unique
-  name          String
-  role          role           @default(USER)
-  password      String
-  email         String         @unique
-  resetToken    String?
-  avatarUrl     String?
-  createdAt     DateTime       @default(now())
-  bannedAt      DateTime?
-  verifyToken   String?
-  isVerified    Boolean        @default(false)
-  verifiedAt    DateTime?
-  posts         post[]
-  comments      comment[]
-  visits        visit[]
-  notifications notification[]
-  reports       report[]
-  postVotes     post_vote[]
-  commentVotes  comment_vote[]
+  id             Int              @id @default(autoincrement())
+  username       String           @unique
+  name           String
+  role           role             @default(USER)
+  password       String
+  email          String           @unique
+  resetToken     String?
+  avatarUrl      String?
+  createdAt      DateTime         @default(now())
+  bannedAt       DateTime?
+  verifyToken    String?
+  isVerified     Boolean          @default(false)
+  verifiedAt     DateTime?
+  posts          post[]
+  comments       comment[]
+  visits         visit[]
+  notifications  notification[]
+  reports        report[]
+  postVotes      post_vote[]
+  commentVotes   comment_vote[]
+  change_request change_request[]
 }
 
 model post {
-  id         Int         @id @default(autoincrement())
-  title      String
-  body       String
-  userId     Int
-  status     post_status @default(PENDING)
-  createdAt  DateTime    @default(now())
-  upvote     Int         @default(0)
-  downvote   Int         @default(0)
-  deletedAt  DateTime?
-  categoryId Int?
-
-  author user @relation(fields: [userId], references: [id])
-
-  subcategoryIds subcategory[]
+  id             Int              @id @default(autoincrement())
+  title          String
+  body           String
+  userId         Int
+  status         String           @default("PENDING")
+  createdAt      DateTime         @default(now())
+  upvote         Int              @default(0)
+  downvote       Int              @default(0)
+  deletedAt      DateTime?
+  categoryId     Int?
+  subcategories  subcategory[]
   comments       comment[]
   visits         visit[]
   postVotes      post_vote[]
   changeRequests change_request[]
-  Category       category?        @relation(fields: [categoryId], references: [id])
-  Report         report[]
+  author         user             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category       category?        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  report         report[]
 }
 
 model category {
-  id            Int           @id @default(autoincrement())
-  name          String
-  createdAt     DateTime      @default(now())
-  posts         post[]
-  subcategories subcategory[]
+  id             Int              @id @default(autoincrement())
+  name           String
+  createdAt      DateTime         @default(now())
+  posts          post[]
+  subcategories  subcategory[]
+  change_request change_request[]
 }
 
 model subcategory {
-  id         Int       @id @default(autoincrement())
-  name       String
-  categoryId Int
-  createdAt  DateTime? @default(now())
-  posts      post[]
-  Category   category  @relation(fields: [categoryId], references: [id])
+  id               Int             @id @default(autoincrement())
+  name             String
+  categoryId       Int
+  createdAt        DateTime?       @default(now())
+  posts            post[]
+  category         category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  change_request   change_request? @relation(fields: [change_requestId], references: [id])
+  change_requestId Int?
 }
 
 model comment {
@@ -80,8 +82,8 @@ model comment {
   parentCommentId Int?
   createdAt       DateTime       @default(now())
   user            user           @relation(fields: [userId], references: [id])
-  post            post           @relation(fields: [postId], references: [id])
-  parentComment   comment?       @relation("CommentToComment", fields: [parentCommentId], references: [id])
+  post            post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentComment   comment?       @relation("CommentToComment", fields: [parentCommentId], references: [id], onDelete: Cascade)
   childComments   comment[]      @relation("CommentToComment")
   commentVotes    comment_vote[]
 }
@@ -92,16 +94,17 @@ model visit {
   postId     Int
   percentage Int      @default(0)
   visitAt    DateTime @default(now())
-  user       user     @relation(fields: [userId], references: [id])
-  post       post     @relation(fields: [postId], references: [id])
+  user       user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post       post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model notification {
   id        Int       @id @default(autoincrement())
   userId    Int
   readAt    DateTime?
+  message   String
   createdAt DateTime  @default(now())
-  user      user      @relation(fields: [userId], references: [id])
+  user      user      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model report {
@@ -111,8 +114,8 @@ model report {
   reason    String
   status    report_status @default(PEDNING)
   createdAt DateTime      @default(now())
-  user      user          @relation(fields: [userId], references: [id])
-  post      post          @relation(fields: [postId], references: [id])
+  user      user          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      post          @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model post_vote {
@@ -121,8 +124,8 @@ model post_vote {
   postId    Int
   positive  Boolean
   createdAt DateTime @default(now())
-  user      user     @relation(fields: [userId], references: [id])
-  post      post     @relation(fields: [postId], references: [id])
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model comment_vote {
@@ -131,17 +134,22 @@ model comment_vote {
   commentId Int
   positive  Boolean
   createdAt DateTime @default(now())
-  user      user     @relation(fields: [userId], references: [id])
-  comment   comment  @relation(fields: [commentId], references: [id])
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
 }
 
 model change_request {
-  id           Int         @id @default(autoincrement())
-  postId       Int
-  reason       String
-  targetStatus post_status
-  createdAt    DateTime    @default(now())
-  post         post        @relation(fields: [postId], references: [id])
+  id            Int           @id @default(autoincrement())
+  postId        Int
+  userId        Int
+  title         String
+  body          String
+  categoryId    Int
+  subcategories subcategory[]
+  category      category?     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt     DateTime      @default(now())
+  post          post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user          user          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum role {
