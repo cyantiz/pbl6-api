@@ -1,0 +1,48 @@
+{
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true,
+    "source.organizeImports": true
+  },
+  "editor.trimAutoWhitespace": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "workbench.colorCustomizations": {
+    "[Material Theme Ocean]": {
+      "activityBarBadge.background": "#84FFFF",
+      "activityBar.activeBorder": "#84FFFF",
+      "list.activeSelectionForeground": "#84FFFF",
+      "list.inactiveSelectionForeground": "#84FFFF",
+      "list.highlightForeground": "#84FFFF",
+      "scrollbarSlider.activeBackground": "#84FFFF50",
+      "editorSuggestWidget.highlightForeground": "#84FFFF",
+      "textLink.foreground": "#84FFFF",
+      "progressBar.background": "#84FFFF",
+      "pickerGroup.foreground": "#84FFFF",
+      "tab.activeBorder": "#84FFFF",
+      "notificationLink.foreground": "#84FFFF",
+      "editorWidget.resizeBorder": "#84FFFF",
+      "editorWidget.border": "#84FFFF",
+      "settings.modifiedItemIndicator": "#84FFFF",
+      "settings.headerForeground": "#84FFFF",
+      "panelTitle.activeBorder": "#84FFFF",
+      "breadcrumb.activeSelectionForeground": "#84FFFF",
+      "menu.selectionForeground": "#84FFFF",
+      "menubar.selectionForeground": "#84FFFF",
+      "editor.findMatchBorder": "#84FFFF",
+      "selection.background": "#84FFFF40",
+      "statusBarItem.remoteBackground": "#84FFFF"
+    },
+    "minimap.background": "#00000000",
+    "scrollbar.shadow": "#00000000"
+  },
+  "editor.tabSize": 2,
+  "[dotenv]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format"
+  }
+}

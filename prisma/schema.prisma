@@ -55,6 +55,8 @@ model post {
 model category {
   id             Int              @id @default(autoincrement())
   name           String
+  thumbnail      String
+  slug           String
   createdAt      DateTime         @default(now())
   posts          post[]
   subcategories  subcategory[]
