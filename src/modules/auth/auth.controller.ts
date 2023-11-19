@@ -14,8 +14,8 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { user } from '@prisma/client';
 import { APISummaries } from 'src/helpers';
+import { EAuth, EAuthPayload, EUserMe } from './auth.entity';
 import { AuthService } from './auth.service';
 import { GetUser } from './decorator/get-user.decorator';
 import {
@@ -25,12 +25,8 @@ import {
   RequestResetPasswordDto,
   ResetPasswordDto,
   VerifyUserDto,
-} from './dto/auth.dto';
+} from './dto/req.dto';
 import { UserGuard } from './guard/auth.guard';
-import { AuthModel } from './model/auth.model';
-
-type UserType = Pick<user, 'role' | 'id' | 'username' | 'email'>;
-
 @Controller('auth')
 @ApiTags('AUTH')
 export class AuthController {
@@ -38,7 +34,7 @@ export class AuthController {
 
   @ApiOperation({ summary: APISummaries.UNAUTH })
   @HttpCode(HttpStatus.CREATED)
-  @ApiOkResponse({ type: AuthModel })
+  @ApiOkResponse({ type: EAuth })
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
@@ -46,7 +42,7 @@ export class AuthController {
 
   @ApiOperation({ summary: APISummaries.UNAUTH })
   @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({ type: AuthModel })
+  @ApiOkResponse({ type: EAuth })
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
@@ -54,7 +50,7 @@ export class AuthController {
 
   @ApiOperation({ summary: APISummaries.UNAUTH })
   @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({ type: AuthModel })
+  @ApiOkResponse({ type: EAuth })
   @Post('refresh')
   refreshToken(@Body() dto: RefreshTokenDto) {
     return this.authService.refreshToken(dto);
@@ -66,7 +62,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(UserGuard)
   @Get('verify')
-  verify(@Query() query: VerifyUserDto, @GetUser() user: UserType) {
+  verify(@Query() query: VerifyUserDto, @GetUser() user: EAuthPayload) {
     return this.authService.verify(query, {
       email: user.email,
       username: user.username,
@@ -91,5 +87,15 @@ export class AuthController {
     this.authService.resetPassword(dto);
 
     return 'Password reset successfully';
+  }
+
+  @ApiOperation({ summary: APISummaries.USER })
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: String })
+  @ApiBearerAuth()
+  @UseGuards(UserGuard)
+  @Get('me')
+  me(@GetUser() user: EUserMe) {
+    return this.authService.getMe(user.id);
   }
 }

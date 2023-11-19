@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 
 import { PlainToInstanceList } from 'src/helpers';
-import { CategoryRespDto } from './res.dto';
+import { CategoryRespDto } from './dto/res.dto';
 
 @Injectable()
 export class CategoryService {

@@ -1,23 +1,35 @@
-export const ErrorMessages = {
-  AUTH: {
-    USER_BANNED: 'This user has been banned',
-    CREDENTIALS_INCORRECT: 'Credentials incorrect',
-    INVALID_TOKEN: 'Invalid token',
-  },
-  NOTIFICATION: {
-    NOTI_NOT_FOUND: 'Notification not found',
-  },
-  REPORT: {
-    REPORT_NOT_FOUND: 'Report not found',
-    USERNAME_INVALID:
-      "The report can't not be created, please verify the target username and reporter username",
-  },
-  USER: {
-    USER_NOT_FOUND: 'User not found',
-    USER_INVALID: 'User invalid',
-    USER_INACTIVE: 'Please activate this user first',
-  },
-  POST: {
-    POST_NOT_FOUND: 'Post not found',
-  },
-};
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { FastifyReply } from 'fastify';
+import { FormatLogger } from './logger';
+
+@Catch(HttpException)
+export class HttpExceptionFilter implements ExceptionFilter {
+  constructor(private readonly configService?: ConfigService) {}
+  catch(exception: HttpException, host: ArgumentsHost) {
+    const logger = new FormatLogger(exception.name);
+    const resp = host.switchToHttp().getResponse<FastifyReply>();
+
+    let errorMessage = exception.getResponse()['message'];
+    if (errorMessage instanceof Array) {
+      errorMessage = errorMessage.at(0);
+    }
+    if (exception instanceof InternalServerErrorException) {
+      logger.error(exception.message);
+    } else {
+      logger.warn(exception.message);
+    }
+    const status = exception.getStatus();
+
+    resp.status(status).send({
+      status: false,
+      error: errorMessage,
+    });
+  }
+}

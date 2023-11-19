@@ -8,9 +8,10 @@ import { JwtService } from '@nestjs/jwt';
 import { Prisma, user } from '@prisma/client';
 import * as argon from 'argon2';
 import { pick } from 'lodash';
-import { ErrorMessages, genRandomString } from 'src/helpers';
+import { ErrorMessages, PlainToInstance, genRandomString } from 'src/helpers';
 import { MailService } from 'src/modules/mail/mail.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
+import { EUserMe } from './auth.entity';
 import {
   LoginDto,
   RefreshTokenDto,
@@ -18,7 +19,7 @@ import {
   RequestResetPasswordDto,
   ResetPasswordDto,
   VerifyUserDto,
-} from './dto/auth.dto';
+} from './dto/req.dto';
 
 @Injectable()
 export class AuthService {
@@ -200,5 +201,15 @@ export class AuthService {
     return {
       accessToken: accessToken,
     };
+  }
+
+  async getMe(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    return PlainToInstance(EUserMe, user);
   }
 }

@@ -154,6 +154,13 @@ model change_request {
   user          user          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model media {
+  id        Int      @id @default(autoincrement())
+  folder   String
+  filename String
+  createdAt DateTime @default(now())
+}
+
 enum role {
   USER
   MODERATOR
