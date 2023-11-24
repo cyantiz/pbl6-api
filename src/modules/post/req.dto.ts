@@ -1,5 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, IntersectionType } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { UploadFileDto } from 'src/base/base.dto';
 import { PostStatus } from 'src/enum/post.enum';
 import { PaginationQuery } from 'src/helpers';
 
@@ -18,26 +20,26 @@ export class GetPostsQuery extends PaginationQuery {
   category?: string[];
 }
 
-export class CreatePostDto {
-  @IsString()
+export class CreatePostDto extends IntersectionType(UploadFileDto) {
   @IsNotEmpty()
+  @IsString()
   @ApiProperty({ type: String, required: true })
   title: string;
 
-  @IsString()
   @IsNotEmpty()
+  @IsString()
   @ApiProperty({ type: String, required: true })
   body: string;
 
-  @IsNumber()
   @IsNotEmpty()
+  @Type(() => Number)
+  @IsNumber()
   @ApiProperty({ type: Number, required: true })
   categoryId: number;
 
-  @IsNumber()
-  @IsNotEmpty()
-  @ApiProperty({ type: [Number], required: true })
-  subcategoryIds: number[];
+  @IsOptional()
+  @ApiProperty({ type: [Number], required: false })
+  subcategoryIds?: number[];
 }
 
 export class CreateChangeRequestDto {
@@ -65,4 +67,17 @@ export class CreateChangeRequestDto {
   @IsOptional()
   @ApiProperty({ type: [Number], required: false })
   subcategoryIds: number[];
+}
+
+export class GetPopularPostsQuery {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @ApiProperty({
+    type: Number,
+    required: false,
+    nullable: true,
+    default: 5,
+  })
+  limit: number;
 }

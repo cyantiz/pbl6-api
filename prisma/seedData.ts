@@ -1,4 +1,4 @@
-import { category, post, user } from '@prisma/client';
+import { category, post, user, visit } from '@prisma/client';
 const getRandomInt = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
@@ -49,7 +49,7 @@ export const seedCategories: Partial<category>[] = [
 ];
 
 const defaultHashedPassword =
-  '$argon2i$v=19$m=4096,t=3,p=1$kJqAgR0bfiGj35XYCYXP3g$b33//sbFVIMWMONoLFtLSki2VnvhFt3wAWWZrVkoFBA'; //await argon.hash('Default-Password123');
+  '$argon2id$v=19$m=65536,t=3,p=4$xMDOC2bczA7juS7hW682Cw$48Wij7VciKxHrdITuuYPAFQtlDVIm72mjGtdYAcATZw'; //await argon.hash('Default-Password123');
 export const seedUsers: Partial<user>[] = Array.from({ length: 10 }).map(
   (_, i) => ({
     email: `nguyen.vh.nhan+${i + 1}@gmail.com`,
@@ -76,7 +76,6 @@ export const seedModerators: Partial<user>[] = Array.from({ length: 10 }).map(
     verifiedAt: new Date(),
   }),
 );
-
 export const seedAdmins: Partial<user>[] = Array.from({ length: 10 }).map(
   (_, i) => ({
     email: `nguyen.vh.nhan+${i + 2001}@gmail.com`,
@@ -91,7 +90,7 @@ export const seedAdmins: Partial<user>[] = Array.from({ length: 10 }).map(
   }),
 );
 
-export const seedPosts: Partial<post>[] = Array.from({ length: 10 }).map(
+export const seedPosts: Partial<post>[] = Array.from({ length: 200 }).map(
   (_, i) => ({
     title: `Seed Post ${i}`,
     body: `
@@ -116,9 +115,22 @@ export const seedPosts: Partial<post>[] = Array.from({ length: 10 }).map(
       </p>
     
     `,
+    secondaryText:
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse fringilla, tellus non tempus ullamcorper, metus erat dignissim purus, a interdum enim nulla vel lacus. Sed nec malesuada massa. Etiam quis tempor neque. Curabitur accumsan enim lacus, id semper nunc viverra id. Donec non dolor semper turpis dignissim interdum. Quisque tincidunt nisi sed urna dictum gravida. Aenean tempus mi sapien, ac accumsan nulla pulvinar eget. Nullam pharetra nibh sapien, ac iaculis risus consectetur rutrum. Fusce scelerisque, massa vitae convallis faucibus, augue sapien gravida velit, semper convallis mauris ante ac eros. Pellentesque semper venenatis orci, non egestas ante faucibus sed. Cras cursus commodo tortor sed tempor. Donec feugiat eleifend ultricies. Phasellus dictum commodo ante aliquet semper. Quisque lobortis, eros ut sagittis cursus, ante arcu feugiat lorem, eu lobortis neque ex quis magna.',
     userId: getRandomInt(1, 10),
     status: 'PUBLISHED',
     createdAt: new Date(),
     categoryId: getRandomInt(1, 7),
+  }),
+);
+
+export const seedVisits: Partial<visit>[] = Array.from({ length: 5000 }).map(
+  () => ({
+    userId: getRandomInt(1, 10),
+    postId: getRandomInt(1, 100),
+    percentage: getRandomInt(0, 100),
+    IP: `${getRandomInt(0, 255)}.${getRandomInt(0, 255)}.${
+      (getRandomInt(0, 255), getRandomInt(0, 255))
+    }`,
   }),
 );

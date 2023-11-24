@@ -19,14 +19,14 @@ import { UserModule } from './modules/user/user.module';
       isGlobal: true,
       load: [AppConfig],
     }),
+    MediaModule,
+    FirebaseModule,
     AuthModule,
     MailModule,
     UserModule,
     ReportModule,
     PostModule,
     CategoryModule,
-    MediaModule,
-    FirebaseModule,
   ],
 })
 export class AppModule {}

@@ -40,7 +40,7 @@ export class FirebaseService {
 
       await file.save(buffer);
 
-      console.log(file);
+      return { file, fileName };
     } catch (error) {
       this.log('Error while uploading file to Firebase Storage', error);
 

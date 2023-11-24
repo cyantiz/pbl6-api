@@ -29,34 +29,41 @@ model user {
   postVotes      post_vote[]
   commentVotes   comment_vote[]
   change_request change_request[]
+  approvedPosts  post[]           @relation("ApproverToPost")
 }
 
 model post {
-  id             Int              @id @default(autoincrement())
-  title          String
-  body           String @db.Text()
-  userId         Int
-  status         String           @default("PENDING")
-  createdAt      DateTime         @default(now())
-  upvote         Int              @default(0)
-  downvote       Int              @default(0)
-  deletedAt      DateTime?
-  categoryId     Int?
-  subcategories  subcategory[]
-  comments       comment[]
-  visits         visit[]
-  postVotes      post_vote[]
-  changeRequests change_request[]
-  author         user             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category       category?        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  report         report[]
+  id               Int              @id @default(autoincrement())
+  title            String
+  secondaryText    String?          @db.Text()
+  body             String           @db.Text()
+  userId           Int
+  approverId       Int?
+  status           String           @default("PENDING")
+  createdAt        DateTime         @default(now())
+  upvote           Int              @default(0)
+  downvote         Int              @default(0)
+  deletedAt        DateTime?
+  approvedAt       DateTime?
+  categoryId       Int?
+  subcategories    subcategory[]
+  comments         comment[]
+  visits           visit[]
+  postVotes        post_vote[]
+  changeRequests   change_request[]
+  thumbnailMediaId Int?
+  thumbnailMedia   media?           @relation(fields: [thumbnailMediaId], references: [id])
+  author           user             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approver         user?            @relation("ApproverToPost", fields: [approverId], references: [id])
+  category         category?        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  report           report[]
 }
 
 model category {
   id             Int              @id @default(autoincrement())
   name           String
   thumbnail      String
-  slug           String @unique
+  slug           String           @unique
   createdAt      DateTime         @default(now())
   posts          post[]
   subcategories  subcategory[]
@@ -93,11 +100,11 @@ model comment {
 model visit {
   id         Int      @id @default(autoincrement())
   userId     Int?
-  IP        String?
+  IP         String?
   postId     Int
   percentage Int      @default(0)
   visitAt    DateTime @default(now())
-  user       user?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       user?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   post       post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
@@ -157,9 +164,9 @@ model change_request {
 
 model media {
   id        Int      @id @default(autoincrement())
-  folder   String
-  filename String
+  fileName  String @db.Text()
   createdAt DateTime @default(now())
+  post      post[]
 }
 
 enum role {

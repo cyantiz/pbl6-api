@@ -6,6 +6,7 @@ import {
   seedModerators,
   seedPosts,
   seedUsers,
+  seedVisits,
 } from './seedData';
 const prisma = new PrismaClient();
 
@@ -23,22 +24,28 @@ async function main() {
     });
   });
 
+  await prisma.user.deleteMany({});
+
   await prisma.$transaction(
     [...seedUsers, ...seedAdmins, ...seedModerators].map(
-      ({
-        email,
-        username,
-        name,
-        role,
-        avatarUrl,
-        password,
-        isVerified,
-        verifiedAt,
-      }) => {
+      (
+        {
+          email,
+          username,
+          name,
+          role,
+          avatarUrl,
+          password,
+          isVerified,
+          verifiedAt,
+        },
+        index,
+      ) => {
         return prisma.user.upsert({
-          where: { username },
+          where: { id: index + 1 },
           update: {},
           create: {
+            id: index + 1,
             email,
             username,
             name,
@@ -55,15 +62,36 @@ async function main() {
 
   await prisma.$transaction([
     prisma.post.deleteMany({}),
-    ...seedPosts.map(({ title, body, userId, status, createdAt, categoryId }) =>
-      prisma.post.create({
+    ...seedPosts.map(
+      (
+        { title, body, userId, secondaryText, status, createdAt, categoryId },
+        index,
+      ) =>
+        prisma.post.create({
+          data: {
+            id: index + 1,
+            title,
+            body,
+            secondaryText,
+            userId,
+            status,
+            createdAt,
+            categoryId,
+          },
+        }),
+    ),
+  ]);
+
+  await prisma.$transaction([
+    ...seedVisits.map(({ postId, userId, percentage, IP }, index) =>
+      prisma.visit.create({
         data: {
-          title,
-          body,
+          id: index + 1,
+          postId,
           userId,
-          status,
-          createdAt,
-          categoryId,
+          IP,
+          percentage,
+          visitAt: new Date(),
         },
       }),
     ),

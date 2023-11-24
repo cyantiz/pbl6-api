@@ -11,11 +11,14 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
   ValidationPipe,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiConsumes,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -25,15 +28,18 @@ import { PostStatus } from 'src/enum/post.enum';
 import { Role } from 'src/enum/role.enum';
 import { APISummaries, PlainToInstance } from 'src/helpers';
 import { MessageModel } from 'src/helpers/prisma';
+import { FastifyFileInterceptor } from 'src/interceptor/file.interceptor';
 import { GetUser } from 'src/modules/auth/decorator/get-user.decorator';
 import { UserGuard } from 'src/modules/auth/guard/auth.guard';
+import { ModeratorGuard } from './../auth/guard/auth.guard';
 import { PostService } from './post.service';
 import {
   CreateChangeRequestDto,
   CreatePostDto,
+  GetPopularPostsQuery,
   GetPostsQuery,
 } from './req.dto';
-import { PostRespDto } from './res.dto';
+import { ExtendedPostRespDto } from './res.dto';
 
 type UserType = Pick<user, 'role' | 'id' | 'username'>;
 
@@ -44,12 +50,12 @@ export class PostController {
 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: APISummaries.UNAUTH })
-  @ApiOkResponse({ type: PostRespDto })
+  @ApiOkResponse({ type: ExtendedPostRespDto })
   @Get()
   async getPosts(
     @Query(new ValidationPipe({ transform: true })) query: GetPostsQuery,
     @GetUser() user: UserType,
-  ): Promise<PostRespDto[]> {
+  ): Promise<ExtendedPostRespDto[]> {
     const isAdmin = user?.role === Role.ADMIN;
 
     query.status = isAdmin ? query.status ?? undefined : PostStatus.PUBLISHED;
@@ -62,15 +68,15 @@ export class PostController {
 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: APISummaries.UNAUTH })
-  @ApiOkResponse({ type: PostRespDto })
+  @ApiOkResponse({ type: ExtendedPostRespDto })
   @Get(':id')
   async getPostById(
     @Param('id', ParseIntPipe) postId: number,
     @GetUser() user: UserType,
-  ): Promise<PostRespDto> {
+  ): Promise<ExtendedPostRespDto> {
     const post = await this.postService.getById(postId);
 
-    if (user.role !== Role.ADMIN && post.status !== PostStatus.PUBLISHED) {
+    if (user?.role !== Role.ADMIN && post.status !== PostStatus.PUBLISHED) {
       throw new NotFoundException('Post not found');
     }
 
@@ -79,15 +85,18 @@ export class PostController {
 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: APISummaries.USER })
-  @ApiOkResponse({ type: PostRespDto })
+  @ApiOkResponse({ type: ExtendedPostRespDto })
   @ApiBearerAuth()
   @UseGuards(UserGuard)
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FastifyFileInterceptor('fileName'))
   @Post()
   async createPost(
+    @UploadedFile() file: Express.Multer.File,
     @Body() dto: CreatePostDto,
     @GetUser() user: UserType,
-  ): Promise<PostRespDto> {
-    return this.postService.create(dto, {
+  ): Promise<ExtendedPostRespDto> {
+    return this.postService.create(dto, file, {
       role: user.role,
       username: user.username,
       userId: user.id,
@@ -96,7 +105,7 @@ export class PostController {
 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: APISummaries.USER })
-  @ApiOkResponse({ type: PostRespDto })
+  @ApiOkResponse({ type: ExtendedPostRespDto })
   @ApiBearerAuth()
   @UseGuards(UserGuard)
   @Delete('id')
@@ -115,7 +124,7 @@ export class PostController {
 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: APISummaries.USER })
-  @ApiOkResponse({ type: PostRespDto })
+  @ApiOkResponse({ type: ExtendedPostRespDto })
   @ApiBearerAuth()
   @UseGuards(UserGuard)
   @Put()
@@ -136,16 +145,46 @@ export class PostController {
 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: APISummaries.UNAUTH })
-  @ApiOkResponse({ type: [PostRespDto] })
+  @ApiOkResponse({ type: [ExtendedPostRespDto] })
   @Get('/popular')
-  async getPopularPost(
-    @Param('id', ParseIntPipe) postId: number,
-    @Query('limit', ParseIntPipe) limit: number,
-  ): Promise<PostRespDto[]> {
+  async getPopularPosts(
+    @Query() query: GetPopularPostsQuery,
+  ): Promise<ExtendedPostRespDto[]> {
     const posts = await this.postService.getPopularPosts({
-      take: limit,
+      take: query.limit,
     });
 
     return posts;
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.UNAUTH })
+  @ApiOkResponse({ type: ExtendedPostRespDto })
+  @Get('/front-page')
+  async getFrontPagePost(): Promise<ExtendedPostRespDto> {
+    const post = await this.postService.getFrontPagePost();
+
+    return post;
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.MODERATOR })
+  @ApiOkResponse({ type: MessageModel })
+  @ApiBearerAuth()
+  @UseGuards(ModeratorGuard)
+  @Put('/:id/approve')
+  async approvePost(
+    @Param('id', ParseIntPipe) postId: number,
+    @GetUser() user: UserType,
+  ): Promise<MessageModel> {
+    await this.postService.approvePost(postId, {
+      role: user.role,
+      username: user.username,
+      userId: user.id,
+    });
+
+    return PlainToInstance(MessageModel, {
+      message: 'Approved',
+    });
   }
 }

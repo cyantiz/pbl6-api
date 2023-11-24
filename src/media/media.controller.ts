@@ -34,7 +34,7 @@ export class MediaController {
 
   @Post()
   create(@Body() createMediaDto: CreateMediaDto) {
-    return this.mediaService.create(createMediaDto);
+    //
   }
 
   @Get()

@@ -15,6 +15,10 @@ export class EPost {
   body: string;
 
   @Expose()
+  @ApiProperty({ type: String })
+  secondaryText: string;
+
+  @Expose()
   @ApiProperty({ type: Number })
   userId: number;
 
@@ -41,6 +45,10 @@ export class EPost {
   @Expose()
   @ApiProperty({ type: Number })
   categoryId: number;
+
+  @Expose()
+  @ApiProperty({ type: Number })
+  thumbnailMediaId: number;
 }
 
 export class EPostAuthor {

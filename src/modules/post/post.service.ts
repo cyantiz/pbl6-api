@@ -4,7 +4,8 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, category, post, subcategory } from '@prisma/client';
+import { Prisma, category, subcategory } from '@prisma/client';
+import { pick } from 'lodash';
 import { PostStatus } from 'src/enum/post.enum';
 import { Role } from 'src/enum/role.enum';
 import {
@@ -13,13 +14,17 @@ import {
   PlainToInstance,
   PlainToInstanceList,
 } from 'src/helpers';
+import { MediaService } from 'src/media/media.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { CreateChangeRequestDto, CreatePostDto } from './req.dto';
-import { PostRespDto } from './res.dto';
+import { ExtendedPostRespDto } from './res.dto';
 
 @Injectable()
 export class PostService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly mediaService: MediaService,
+  ) {}
 
   private async findCategoryById(categoryId: number): Promise<category> {
     return await this.prismaService.category.findFirst({
@@ -43,11 +48,13 @@ export class PostService {
 
   private async checkCatSubCat(
     categoryId: number,
-    subcategoryIds: number[],
+    subcategoryIds?: number[],
   ): Promise<{ category: category; subcategories: subcategory[] }> {
     const category = await this.findCategoryById(categoryId);
 
     if (!category) throw new NotFoundException('Category not found');
+
+    if (!subcategoryIds) return { category, subcategories: [] };
 
     const subcategories = await this.findSubCategoriesByIds(subcategoryIds);
 
@@ -69,14 +76,16 @@ export class PostService {
     postId: number;
     role?: string;
     userId?: number;
-  }): Promise<post> {
+  }) {
     const { postId, role, userId } = params;
 
     const post = await this.getById(postId);
 
     if (!post) throw new NotFoundException('Post not found');
 
-    if (role === Role.USER && post.userId !== userId) {
+    if ([Role.ADMIN, Role.MODERATOR].includes(role as Role)) return post;
+
+    if (post.userId !== userId) {
       throw new UnauthorizedException('Permission denied');
     }
 
@@ -88,9 +97,9 @@ export class PostService {
       status?: PostStatus;
       category?: string[];
     } & PaginationQuery,
-  ): Promise<PostRespDto[]> {
+  ): Promise<ExtendedPostRespDto[]> {
     const { status, category, page, pageSize } = params;
-    const dbQuery = {
+    const dbQuery: Prisma.postFindManyArgs = {
       where: {
         status: status,
         category: category && {
@@ -102,95 +111,154 @@ export class PostService {
       include: {
         author: true,
         category: true,
+        visits: true,
+        thumbnailMedia: true,
       },
-    } satisfies Prisma.postFindManyArgs;
+    };
 
     PaginationHandle(dbQuery, page, pageSize);
 
     const posts = await this.prismaService.post.findMany(dbQuery);
 
-    return PlainToInstanceList(PostRespDto, posts);
+    return PlainToInstanceList(ExtendedPostRespDto, posts);
   }
 
-  async getById(id: number): Promise<PostRespDto> {
+  async getById(id: number): Promise<ExtendedPostRespDto> {
     const post = await this.prismaService.post.findFirst({
       where: {
         id,
       },
       include: {
-        author: {
-          select: {
-            name: true,
-            username: true,
-          },
-        },
+        author: true,
+        category: true,
+        visits: true,
+        thumbnailMedia: true,
       },
     });
 
     if (!post) throw new NotFoundException('Post not found');
 
-    return PlainToInstance(PostRespDto, post);
+    return PlainToInstance(ExtendedPostRespDto, post);
   }
 
-  async getPopularPosts(params: { take: number }): Promise<PostRespDto[]> {
-    const { take } = params;
-    const posts = await this.prismaService.post.findMany({
+  /**
+   *
+   * @returns {ExtendedPostRespDto} The most visited post in the last 30 days
+   */
+  async getFrontPagePost(): Promise<ExtendedPostRespDto> {
+    const post = await this.prismaService.post.findFirst({
       where: {
         status: PostStatus.PUBLISHED,
       },
       include: {
-        visits: true,
+        visits: {
+          where: {
+            visitAt: {
+              gte: new Date(Date.now() - 1000 * 3600 * 24 * 30),
+            },
+          },
+        },
         category: true,
         author: true,
+        thumbnailMedia: true,
       },
       orderBy: {
         visits: {
           _count: 'desc',
         },
       },
-      take,
     });
 
-    return PlainToInstanceList(PostRespDto, posts);
+    return PlainToInstance(ExtendedPostRespDto, post);
+  }
+
+  /**
+   *
+   * @returns {ExtendedPostRespDto[]} The most visited posts in the last 30 days
+   */
+  async getPopularPosts(params: {
+    take: number;
+  }): Promise<ExtendedPostRespDto[]> {
+    const { take } = params;
+    const posts = await this.prismaService.post.findMany({
+      where: {
+        status: PostStatus.PUBLISHED,
+      },
+      include: {
+        visits: {
+          where: {
+            visitAt: {
+              gte: new Date(Date.now() - 1000 * 3600 * 24 * 30),
+            },
+          },
+        },
+        category: true,
+        author: true,
+        thumbnailMedia: true,
+      },
+      orderBy: {
+        visits: {
+          _count: 'desc',
+        },
+      },
+      skip: 1,
+      take: +take,
+    });
+
+    return PlainToInstanceList(ExtendedPostRespDto, posts);
   }
 
   async create(
     dto: CreatePostDto,
-    options: {
+    thumbnailFile: Express.Multer.File,
+    authData: {
       role?: string;
       username?: string;
       userId?: number;
     },
-  ): Promise<PostRespDto> {
+  ): Promise<ExtendedPostRespDto> {
     const { category, subcategories } = await this.checkCatSubCat(
-      dto.categoryId,
-      dto.subcategoryIds,
+      +dto.categoryId,
+      dto.subcategoryIds ? dto.subcategoryIds.map((id) => +id) : undefined,
     );
+
+    const thumbnailMedia = await this.mediaService.create({
+      file: thumbnailFile,
+    });
+
+    console.log('thumbnailMedia', thumbnailMedia);
 
     const post = await this.prismaService.post.create({
       data: {
         title: dto.title,
         body: dto.body,
-        author: {
+        thumbnailMedia: {
           connect: {
-            id: options.userId,
+            id: thumbnailMedia.id,
           },
         },
-        subcategories: {
-          connect: subcategories,
+        author: {
+          connect: {
+            id: authData.userId,
+          },
         },
+        subcategories: subcategories.length
+          ? {
+              connect: pick(subcategories, 'id'),
+            }
+          : undefined,
         category: {
-          connect: category,
+          connect: pick(category, 'id'),
         },
       },
     });
 
-    return PlainToInstance(PostRespDto, post);
+    return PlainToInstance(ExtendedPostRespDto, post);
   }
 
   async deletePostById(
     postId: number,
-    options: {
+    authData: {
       role?: string;
       username?: string;
       userId?: number;
@@ -198,8 +266,8 @@ export class PostService {
   ): Promise<void> {
     const post = await this.verifyPostAccessible({
       postId,
-      role: options.role,
-      userId: options.userId,
+      role: authData.role,
+      userId: authData.userId,
     });
 
     await this.prismaService.post.delete({
@@ -211,7 +279,7 @@ export class PostService {
 
   async createChangeRequest(
     dto: CreateChangeRequestDto,
-    options: {
+    authData: {
       role?: string;
       username?: string;
       userId?: number;
@@ -219,8 +287,8 @@ export class PostService {
   ): Promise<void> {
     const post = await this.verifyPostAccessible({
       postId: dto.postId,
-      role: options.role,
-      userId: options.userId,
+      role: authData.role,
+      userId: authData.userId,
     });
 
     const { category, subcategories } = await this.checkCatSubCat(
@@ -282,7 +350,7 @@ export class PostService {
             },
             user: {
               connect: {
-                id: options.userId,
+                id: authData.userId,
               },
             },
           },
@@ -290,5 +358,39 @@ export class PostService {
 
         break;
     }
+  }
+
+  async approvePost(
+    postId: number,
+    authData: {
+      role?: string;
+      username?: string;
+      userId?: number;
+    },
+  ): Promise<void> {
+    const post = await this.verifyPostAccessible({
+      postId,
+      role: authData.role,
+      userId: authData.userId,
+    });
+
+    const permitted = [Role.ADMIN, Role.MODERATOR].includes(
+      authData.role as Role,
+    );
+
+    if (!permitted) throw new UnauthorizedException('Permission denied!');
+
+    if (post.status !== PostStatus.PENDING)
+      throw new BadRequestException('Post is not pending');
+
+    await this.prismaService.post.update({
+      where: {
+        id: post.id,
+      },
+      data: {
+        status: PostStatus.PUBLISHED,
+        approverId: authData.userId,
+      },
+    });
   }
 }

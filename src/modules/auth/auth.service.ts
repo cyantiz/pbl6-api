@@ -68,6 +68,8 @@ export class AuthService {
     if (user.bannedAt)
       throw new ForbiddenException(ErrorMessages.AUTH.USER_BANNED);
 
+    console.log(await argon.hash(dto.password));
+
     const passwordMatches = await argon.verify(user.password, dto.password);
 
     if (!passwordMatches)
