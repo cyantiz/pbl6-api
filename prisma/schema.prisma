@@ -34,7 +34,7 @@ model user {
 model post {
   id             Int              @id @default(autoincrement())
   title          String
-  body           String
+  body           String @db.Text()
   userId         Int
   status         String           @default("PENDING")
   createdAt      DateTime         @default(now())
@@ -56,7 +56,7 @@ model category {
   id             Int              @id @default(autoincrement())
   name           String
   thumbnail      String
-  slug           String
+  slug           String @unique
   createdAt      DateTime         @default(now())
   posts          post[]
   subcategories  subcategory[]
@@ -92,11 +92,12 @@ model comment {
 
 model visit {
   id         Int      @id @default(autoincrement())
-  userId     Int
+  userId     Int?
+  IP        String?
   postId     Int
   percentage Int      @default(0)
   visitAt    DateTime @default(now())
-  user       user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       user?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   post       post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 

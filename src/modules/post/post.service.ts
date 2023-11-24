@@ -132,6 +132,28 @@ export class PostService {
     return PlainToInstance(PostRespDto, post);
   }
 
+  async getPopularPosts(params: { take: number }): Promise<PostRespDto[]> {
+    const { take } = params;
+    const posts = await this.prismaService.post.findMany({
+      where: {
+        status: PostStatus.PUBLISHED,
+      },
+      include: {
+        visits: true,
+        category: true,
+        author: true,
+      },
+      orderBy: {
+        visits: {
+          _count: 'desc',
+        },
+      },
+      take,
+    });
+
+    return PlainToInstanceList(PostRespDto, posts);
+  }
+
   async create(
     dto: CreatePostDto,
     options: {

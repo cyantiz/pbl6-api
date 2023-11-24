@@ -1,59 +1,22 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, IntersectionType } from '@nestjs/swagger';
 import { Expose, Transform } from 'class-transformer';
+import { PlainToInstance } from 'src/helpers';
+import { ECategory } from '../category/category.entity';
+import { EPost, EPostAuthor } from './post.entity';
 
-export class PostRespDto {
+export class PostRespDto extends IntersectionType(EPost) {
   @Expose()
-  @ApiProperty({ type: Number })
-  id: number;
-
-  @Expose()
-  @ApiProperty({ type: String })
-  title: string;
-
-  @Expose()
-  @ApiProperty({ type: String })
-  body: string;
+  @ApiProperty({ type: EPostAuthor })
+  @Transform(({ obj }) => PlainToInstance(EPostAuthor, obj?.author))
+  author: EPostAuthor;
 
   @Expose()
-  @ApiProperty({ type: Number })
-  userId: number;
-
-  @Expose()
-  @ApiProperty({ type: String })
-  status: string;
-
-  @Expose()
-  @ApiProperty({ type: Date })
-  createdAt: Date;
-
-  @Expose()
-  @ApiProperty({ type: Date })
-  deletedAt: Date;
+  @ApiProperty({ type: ECategory })
+  @Transform(({ obj }) => PlainToInstance(ECategory, obj?.category))
+  category: ECategory;
 
   @Expose()
   @ApiProperty({ type: Number })
-  upvote: number;
-
-  @Expose()
-  @ApiProperty({ type: Number })
-  downvote: number;
-
-  @Expose()
-  @ApiProperty({ type: Number })
-  categoryId: number;
-
-  @Expose()
-  @ApiProperty({ type: String })
-  @Transform(({ obj }) => obj.author.username)
-  authorUsername: string;
-
-  @Expose()
-  @ApiProperty({ type: String })
-  @Transform(({ obj }) => obj.author.name)
-  authorName: string;
-
-  @Expose()
-  @ApiProperty({ type: String })
-  @Transform(({ obj }) => obj.category.name)
-  categoryName: string;
+  @Transform(({ obj }) => obj.visits?.length)
+  visitCount: number;
 }

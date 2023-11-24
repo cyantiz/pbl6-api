@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
-export class Category {
+export class ECategory {
   @Expose()
   @ApiProperty({ type: Number })
   id: number;

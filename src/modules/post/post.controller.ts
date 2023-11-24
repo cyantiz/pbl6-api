@@ -133,4 +133,19 @@ export class PostController {
       message: 'Changes have been requested',
     });
   }
+
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.UNAUTH })
+  @ApiOkResponse({ type: [PostRespDto] })
+  @Get('/popular')
+  async getPopularPost(
+    @Param('id', ParseIntPipe) postId: number,
+    @Query('limit', ParseIntPipe) limit: number,
+  ): Promise<PostRespDto[]> {
+    const posts = await this.postService.getPopularPosts({
+      take: limit,
+    });
+
+    return posts;
+  }
 }

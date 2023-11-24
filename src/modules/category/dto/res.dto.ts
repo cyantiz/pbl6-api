@@ -1,3 +1,3 @@
-import { Category } from '../category.entity';
+import { ECategory } from '../category.entity';
 
-export class CategoryRespDto extends Category {}
+export class CategoryRespDto extends ECategory {}
