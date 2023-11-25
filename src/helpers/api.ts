@@ -1,6 +1,7 @@
 export const APISummaries = {
   UNAUTH: 'No token required',
   USER: 'User permission required',
+  EDITOR: 'Editor permission required',
   ADMIN: 'Admin permission required',
   MODERATOR: 'Moderator permission requried',
 };

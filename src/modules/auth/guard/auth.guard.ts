@@ -12,6 +12,12 @@ export class ModeratorGuard extends AuthGuard('moderator') {
   }
 }
 
+export class EditorGuard extends AuthGuard('editor') {
+  constructor() {
+    super();
+  }
+}
+
 export class AdminGuard extends AuthGuard('admin') {
   constructor() {
     super();

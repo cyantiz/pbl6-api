@@ -172,12 +172,12 @@ export class AuthService {
     const payload = pick(user, pickedFields);
 
     const accessToken: string = await this.jwt.signAsync(payload, {
-      expiresIn: '60m',
+      expiresIn: '3d',
       secret: this.jwtSecret,
     });
 
     const refreshToken: string = await this.jwt.signAsync(payload, {
-      expiresIn: '7d',
+      expiresIn: '14d',
       secret: this.jwtSecret,
     });
 

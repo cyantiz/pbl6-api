@@ -96,17 +96,19 @@ export class PostService {
     params: {
       status?: PostStatus;
       category?: string[];
+      userId?: number;
     } & PaginationQuery,
   ): Promise<ExtendedPostRespDto[]> {
-    const { status, category, page, pageSize } = params;
+    const { status, category, page, pageSize, userId } = params;
     const dbQuery: Prisma.postFindManyArgs = {
       where: {
-        status: status,
+        status: status ?? undefined,
         category: category && {
           slug: {
             in: category,
           },
         },
+        userId: userId ?? undefined,
       },
       include: {
         author: true,
@@ -217,6 +219,12 @@ export class PostService {
       userId?: number;
     },
   ): Promise<ExtendedPostRespDto> {
+    const permitted = [Role.ADMIN, Role.MODERATOR, Role.EDITOR].includes(
+      authData.role as Role,
+    );
+
+    if (!permitted) throw new UnauthorizedException('Permission denied!');
+
     const { category, subcategories } = await this.checkCatSubCat(
       +dto.categoryId,
       dto.subcategoryIds ? dto.subcategoryIds.map((id) => +id) : undefined,

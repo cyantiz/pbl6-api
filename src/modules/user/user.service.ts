@@ -57,6 +57,7 @@ export class UserService {
     let result: UserModel;
     if (
       (user.role === Role.USER && username === user.username) ||
+      (user.role === Role.EDITOR && username === user.username) ||
       (user.role === Role.MODERATOR && username === user.username) ||
       user.role === Role.ADMIN
     ) {
@@ -104,6 +105,7 @@ export class UserService {
 
     if (
       (user.role === Role.USER && username === user.username) ||
+      (user.role === Role.EDITOR && username === user.username) ||
       (user.role === Role.MODERATOR && username === user.username) ||
       (user.role === Role.ADMIN && username)
     )

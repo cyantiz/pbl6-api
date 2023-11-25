@@ -171,6 +171,7 @@ model media {
 
 enum role {
   USER
+  EDITOR
   MODERATOR
   ADMIN
 }

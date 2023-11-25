@@ -44,6 +44,26 @@ export class PaginationQuery {
   pageSize: number = null;
 }
 
+export class OptionalPaginationQuery {
+  @Type(() => Number)
+  @ApiProperty({
+    type: 'integer',
+    default: null,
+    nullable: true,
+    required: false,
+  })
+  page?: number = null;
+
+  @Type(() => Number)
+  @ApiProperty({
+    type: 'integer',
+    default: null,
+    nullable: true,
+    required: false,
+  })
+  pageSize?: number = null;
+}
+
 export class MessageModel {
   @Type(() => String)
   @Expose()

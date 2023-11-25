@@ -27,10 +27,10 @@ import { user } from '@prisma/client';
 import { PostStatus } from 'src/enum/post.enum';
 import { Role } from 'src/enum/role.enum';
 import { APISummaries, PlainToInstance } from 'src/helpers';
-import { MessageModel } from 'src/helpers/prisma';
+import { MessageModel, PaginationQuery } from 'src/helpers/prisma';
 import { FastifyFileInterceptor } from 'src/interceptor/file.interceptor';
 import { GetUser } from 'src/modules/auth/decorator/get-user.decorator';
-import { UserGuard } from 'src/modules/auth/guard/auth.guard';
+import { EditorGuard, UserGuard } from 'src/modules/auth/guard/auth.guard';
 import { ModeratorGuard } from './../auth/guard/auth.guard';
 import { PostService } from './post.service';
 import {
@@ -84,12 +84,12 @@ export class PostController {
   }
 
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: APISummaries.USER })
+  @ApiOperation({ summary: APISummaries.EDITOR })
   @ApiOkResponse({ type: ExtendedPostRespDto })
   @ApiBearerAuth()
   @UseGuards(UserGuard)
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FastifyFileInterceptor('fileName'))
+  @UseInterceptors(FastifyFileInterceptor('filename'))
   @Post()
   async createPost(
     @UploadedFile() file: Express.Multer.File,
@@ -141,6 +141,24 @@ export class PostController {
     return PlainToInstance(MessageModel, {
       message: 'Changes have been requested',
     });
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.EDITOR })
+  @ApiOkResponse({ type: [ExtendedPostRespDto] })
+  @ApiBearerAuth()
+  @UseGuards(EditorGuard)
+  @Get('/mine')
+  async getMyPosts(
+    @Query() query: PaginationQuery,
+    @GetUser() user: UserType,
+  ): Promise<ExtendedPostRespDto[]> {
+    const posts = await this.postService.get({
+      userId: user.id,
+      ...query,
+    });
+
+    return posts;
   }
 
   @HttpCode(HttpStatus.OK)

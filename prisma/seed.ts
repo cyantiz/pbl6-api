@@ -3,6 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import {
   seedAdmins,
   seedCategories,
+  seedEditors,
+  seedMedias,
   seedModerators,
   seedPosts,
   seedUsers,
@@ -27,7 +29,7 @@ async function main() {
   await prisma.user.deleteMany({});
 
   await prisma.$transaction(
-    [...seedUsers, ...seedAdmins, ...seedModerators].map(
+    [...seedUsers, ...seedAdmins, ...seedModerators, ...seedEditors].map(
       (
         {
           email,
@@ -61,6 +63,19 @@ async function main() {
   );
 
   await prisma.$transaction([
+    ...seedMedias.map(({ createdAt, fileName }, index) =>
+      prisma.media.upsert({
+        where: { id: index + 1 },
+        update: {},
+        create: {
+          fileName,
+          createdAt,
+        },
+      }),
+    ),
+  ]);
+
+  await prisma.$transaction([
     prisma.post.deleteMany({}),
     ...seedPosts.map(
       (
@@ -70,6 +85,7 @@ async function main() {
         prisma.post.create({
           data: {
             id: index + 1,
+            thumbnailMediaId: 1,
             title,
             body,
             secondaryText,

@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import {
   AdminStrategy,
+  EditorStrategy,
   ModeratorStrategy,
   UserStrategy,
 } from './strategy/jwt.strategy';
@@ -16,6 +17,7 @@ import {
     AuthService,
     AdminStrategy,
     UserStrategy,
+    EditorStrategy,
     ModeratorStrategy,
     MailService,
   ],

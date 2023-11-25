@@ -1,4 +1,4 @@
-import { category, post, user, visit } from '@prisma/client';
+import { category, media, post, user, visit } from '@prisma/client';
 const getRandomInt = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
@@ -89,6 +89,19 @@ export const seedAdmins: Partial<user>[] = Array.from({ length: 10 }).map(
     verifiedAt: new Date(),
   }),
 );
+export const seedEditors: Partial<user>[] = Array.from({ length: 10 }).map(
+  (_, i) => ({
+    email: `nguyen.vh.nhan+${i + 4001}@gmail.com`,
+    username: `seededitor${i + 1}`,
+    name: `Seed Editor ${i}`,
+    role: 'EDITOR',
+    avatarUrl:
+      'https://images.unsplash.com/photo-1506543730435-e2c1d4553a84?auto=format&fit=crop&q=80&w=1000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cGxhbnQlMjBtaW5pbWFsfGVufDB8fDB8fHww',
+    password: defaultHashedPassword,
+    isVerified: true,
+    verifiedAt: new Date(),
+  }),
+);
 
 export const seedPosts: Partial<post>[] = Array.from({ length: 200 }).map(
   (_, i) => ({
@@ -134,3 +147,10 @@ export const seedVisits: Partial<visit>[] = Array.from({ length: 5000 }).map(
     }`,
   }),
 );
+
+export const seedMedias: Partial<media>[] = [
+  {
+    fileName: 'FILE14c1ea48-13ae-4822-b5d7-43a30b1144881700870116867.jpg',
+    createdAt: new Date(),
+  },
+];
