@@ -1,8 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { report_status } from '@prisma/client';
+import { ReportStatus } from '@prisma/client';
 import { Expose } from 'class-transformer';
-import { IsIn, IsNumber, IsString } from 'class-validator';
-import { ReportStatus } from 'src/enum/report.enum';
+import { IsEnum, IsNumber, IsString } from 'class-validator';
 
 export class ReportDto {
   @IsNumber()
@@ -15,9 +14,9 @@ export class ReportDto {
 }
 
 export class HandleReportDto {
-  @IsIn(Object.values(ReportStatus))
   @Expose()
+  @IsEnum(ReportStatus)
   @IsString()
   @ApiProperty({ type: String, nullable: false, required: true })
-  status: report_status;
+  status: ReportStatus;
 }

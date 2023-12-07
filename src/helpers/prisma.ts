@@ -1,5 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { Expose, Type } from 'class-transformer';
+import { PaginationRespDto } from 'src/base/dto';
 
 export const PaginationHandle = (
   query: object,
@@ -24,48 +23,20 @@ export const OrderByHandle = (query: object, orderBy: Array<object>) => {
   return query;
 };
 
-export class PaginationQuery {
-  @Type(() => Number)
-  @ApiProperty({
-    type: 'integer',
-    default: null,
-    nullable: true,
-    required: false,
-  })
-  page: number = null;
+export const getPaginationInfo = (params: {
+  count: number;
+  pageSize: number;
+  page: number;
+}): PaginationRespDto => {
+  const { count, pageSize, page } = params;
+  const totalPage = Math.ceil(count / pageSize);
+  const nextPage = page + 1 > totalPage ? null : page + 1;
 
-  @Type(() => Number)
-  @ApiProperty({
-    type: 'integer',
-    default: null,
-    nullable: true,
-    required: false,
-  })
-  pageSize: number = null;
-}
-
-export class OptionalPaginationQuery {
-  @Type(() => Number)
-  @ApiProperty({
-    type: 'integer',
-    default: null,
-    nullable: true,
-    required: false,
-  })
-  page?: number = null;
-
-  @Type(() => Number)
-  @ApiProperty({
-    type: 'integer',
-    default: null,
-    nullable: true,
-    required: false,
-  })
-  pageSize?: number = null;
-}
-
-export class MessageModel {
-  @Type(() => String)
-  @Expose()
-  message: string = null;
-}
+  return {
+    total: count,
+    totalPage,
+    pageSize,
+    page,
+    nextPage,
+  };
+};

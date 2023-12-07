@@ -8,4 +8,7 @@ export default () => ({
   firebase: {
     storageBucketName: process.env.FIREBASE_STORAGE_BUCKET_NAME,
   },
+  mongodb: {
+    article: process.env.ARTICLE_MONGO_URL || '',
+  },
 });

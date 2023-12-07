@@ -8,55 +8,61 @@ generator client {
 }
 
 model user {
-  id             Int              @id @default(autoincrement())
-  username       String           @unique
-  name           String
-  role           role             @default(USER)
-  password       String
-  email          String           @unique
-  resetToken     String?
-  avatarUrl      String?
-  createdAt      DateTime         @default(now())
-  bannedAt       DateTime?
-  verifyToken    String?
-  isVerified     Boolean          @default(false)
-  verifiedAt     DateTime?
-  posts          post[]
-  comments       comment[]
-  visits         visit[]
-  notifications  notification[]
-  reports        report[]
-  postVotes      post_vote[]
-  commentVotes   comment_vote[]
-  change_request change_request[]
-  approvedPosts  post[]           @relation("ApproverToPost")
+  id          Int       @id @default(autoincrement())
+  username    String    @unique
+  name        String
+  role        Role      @default(USER)
+  password    String
+  email       String    @unique
+  resetToken  String?
+  avatarUrl   String?
+  createdAt   DateTime  @default(now())
+  bannedAt    DateTime?
+  verifyToken String?
+  isVerified  Boolean   @default(false)
+  verifiedAt  DateTime?
+  promotedAt  DateTime?
+
+  posts              post[]
+  comments           comment[]
+  visits             visit[]
+  notifications      notification[]
+  reports            report[]
+  postVotes          post_vote[]
+  commentVotes       comment_vote[]
+  change_request     change_request[]
+  editor_reg_request editor_reg_request[]
 }
 
 model post {
-  id               Int              @id @default(autoincrement())
-  title            String
-  secondaryText    String?          @db.Text()
-  body             String           @db.Text()
-  userId           Int
-  approverId       Int?
-  status           String           @default("PENDING")
-  createdAt        DateTime         @default(now())
-  upvote           Int              @default(0)
-  downvote         Int              @default(0)
-  deletedAt        DateTime?
-  approvedAt       DateTime?
-  categoryId       Int?
-  subcategories    subcategory[]
+  id            Int        @id @default(autoincrement())
+  title         String
+  slug          String     @unique
+  secondaryText String?    @db.Text()
+  body          String     @db.Text()
+  userId        Int
+  categoryId    Int?
+  status        PostStatus @default(DRAFT)
+  upvote        Int        @default(0)
+  downvote      Int        @default(0)
+  mongoOid      String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime?
+  publishedAt   DateTime?
+  unpublishedAt DateTime?
+  deletedAt     DateTime?
+
   comments         comment[]
   visits           visit[]
   postVotes        post_vote[]
   changeRequests   change_request[]
   thumbnailMediaId Int?
-  thumbnailMedia   media?           @relation(fields: [thumbnailMediaId], references: [id])
-  author           user             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  approver         user?            @relation("ApproverToPost", fields: [approverId], references: [id])
-  category         category?        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  thumbnailMedia   media?             @relation(fields: [thumbnailMediaId], references: [id])
+  author           user               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category         category?          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   report           report[]
+  post_media       post_media[]
+  post_subcategory post_subcategory[]
 }
 
 model category {
@@ -71,14 +77,14 @@ model category {
 }
 
 model subcategory {
-  id               Int             @id @default(autoincrement())
+  id               Int                @id @default(autoincrement())
   name             String
   categoryId       Int
-  createdAt        DateTime?       @default(now())
-  posts            post[]
-  category         category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  change_request   change_request? @relation(fields: [change_requestId], references: [id])
+  createdAt        DateTime?          @default(now())
+  category         category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  change_request   change_request?    @relation(fields: [change_requestId], references: [id])
   change_requestId Int?
+  post_subcategory post_subcategory[]
 }
 
 model comment {
@@ -118,14 +124,14 @@ model notification {
 }
 
 model report {
-  id        Int           @id @default(autoincrement())
+  id        Int          @id @default(autoincrement())
   userId    Int
   postId    Int
   reason    String
-  status    report_status @default(PEDNING)
-  createdAt DateTime      @default(now())
-  user      user          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  status    ReportStatus @default(PEDNING)
+  createdAt DateTime     @default(now())
+  user      user         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      post         @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model post_vote {
@@ -162,28 +168,90 @@ model change_request {
   user          user          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model media {
-  id        Int      @id @default(autoincrement())
-  fileName  String @db.Text()
-  createdAt DateTime @default(now())
-  post      post[]
+model editor_reg_request {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  createdAt  DateTime  @default(now())
+  approvedAt DateTime?
+  message    String    @db.Text()
+  user       user      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-enum role {
+model media {
+  id          Int          @id @default(autoincrement())
+  fileName    String?      @db.Text()
+  alt         String?      @db.Text()
+  externalUrl String?      @db.Text()
+  createdAt   DateTime     @default(now())
+  post        post[]
+  post_media  post_media[]
+}
+
+model post_media {
+  postId    Int
+  mediaId   Int
+  post      post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  media     media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([postId, mediaId])
+}
+
+model post_subcategory {
+  postId        Int
+  subcategoryId Int
+  post          post        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  subcategory   subcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@id([postId, subcategoryId])
+}
+
+model temp_article_from_mongo {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.Text()
+  article     String   @db.Text()
+  sport_type  String
+  author      String
+  image_0_url String?  @db.Text()
+  image_0_alt String?  @db.Text()
+  image_1_url String?  @db.Text()
+  image_1_alt String?  @db.Text()
+  image_2_url String?  @db.Text()
+  image_2_alt String?  @db.Text()
+  image_3_url String?  @db.Text()
+  image_3_alt String?  @db.Text()
+  image_4_url String?  @db.Text()
+  image_4_alt String?  @db.Text()
+  image_5_url String?  @db.Text()
+  image_5_alt String?  @db.Text()
+  image_6_url String?  @db.Text()
+  image_6_alt String?  @db.Text()
+  image_7_url String?  @db.Text()
+  image_7_alt String?  @db.Text()
+  image_8_url String?  @db.Text()
+  image_8_alt String?  @db.Text()
+  image_9_url String?  @db.Text()
+  image_9_alt String?  @db.Text()
+  from        String?  @db.Text()
+  createdAt   DateTime @default(now())
+}
+
+enum Role {
   USER
   EDITOR
   MODERATOR
   ADMIN
 }
 
-enum post_status {
-  PENDING
+enum PostStatus {
+  DRAFT
   DELETED
-  ACTIVE
+  PUBLISHED
   DENIED
 }
 
-enum report_status {
+enum ReportStatus {
   PEDNING
   PROCESSING
   RESOLVED

@@ -10,3 +10,17 @@ export function genRandomString(length = 6): string {
   }
   return random;
 }
+
+export const getSlug = (str: string, separator = '') => {
+  str = str.replace(/\([^)]*\)/, '').trim();
+  str = str.toLowerCase();
+  str = str.replace(/\./g, '');
+  str = str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  str = str.replace(/[đĐ]/g, 'd');
+  str = str.replace(/([^0-9a-z-\s])/g, '');
+  str = str.replace(/(\s+)/g, '-');
+  str = str.replace(/-+/g, '-');
+  str = str.replace(/^-+|-+$/g, '');
+
+  return str.split('-').join('');
+};

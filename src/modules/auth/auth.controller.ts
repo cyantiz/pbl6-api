@@ -17,7 +17,7 @@ import {
 import { APISummaries } from 'src/helpers';
 import { EAuth, EAuthPayload, EUserMe } from './auth.entity';
 import { AuthService } from './auth.service';
-import { GetUser } from './decorator/get-user.decorator';
+import { GetAuthData } from './decorator/get-auth-data.decorator';
 import {
   LoginDto,
   RefreshTokenDto,
@@ -62,7 +62,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(UserGuard)
   @Get('verify')
-  verify(@Query() query: VerifyUserDto, @GetUser() user: EAuthPayload) {
+  verify(@Query() query: VerifyUserDto, @GetAuthData() user: EAuthPayload) {
     return this.authService.verify(query, {
       email: user.email,
       username: user.username,
@@ -95,7 +95,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(UserGuard)
   @Get('me')
-  me(@GetUser() user: EUserMe) {
+  me(@GetAuthData() user: EUserMe) {
     return this.authService.getMe(user.id);
   }
 }

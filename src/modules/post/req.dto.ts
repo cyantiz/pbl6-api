@@ -1,9 +1,15 @@
 import { ApiProperty, IntersectionType } from '@nestjs/swagger';
+import { PostStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
-import { UploadFileDto } from 'src/base/base.dto';
-import { PostStatus } from 'src/enum/post.enum';
-import { PaginationQuery } from 'src/helpers';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import { UploadFileDto } from 'src/base/dto';
+import { PaginationQuery } from 'src/base/query';
 
 export class GetPostsQuery extends PaginationQuery {
   @IsString()
@@ -40,6 +46,16 @@ export class CreatePostDto extends IntersectionType(UploadFileDto) {
   @IsOptional()
   @ApiProperty({ type: [Number], required: false })
   subcategoryIds?: number[];
+
+  @IsOptional()
+  @IsEnum(PostStatus)
+  @ApiProperty({
+    type: String,
+    enum: PostStatus,
+    default: PostStatus.PUBLISHED,
+    required: false,
+  })
+  status = PostStatus.PUBLISHED;
 }
 
 export class CreateChangeRequestDto {

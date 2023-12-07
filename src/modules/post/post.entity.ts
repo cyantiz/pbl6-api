@@ -12,6 +12,10 @@ export class EPost {
 
   @Expose()
   @ApiProperty({ type: String })
+  slug: string;
+
+  @Expose()
+  @ApiProperty({ type: String })
   body: string;
 
   @Expose()
@@ -63,4 +67,8 @@ export class EPostAuthor {
   @Expose()
   @ApiProperty({ type: String })
   name: string;
+
+  @Expose()
+  @ApiProperty({ type: String })
+  avatarUrl: string;
 }

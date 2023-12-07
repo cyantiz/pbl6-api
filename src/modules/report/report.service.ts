@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Role } from 'src/enum/role.enum';
+import { Role } from '@prisma/client';
+import { PaginationQuery } from 'src/base/query';
 import {
   ErrorMessages,
   PaginationHandle,
-  PaginationQuery,
   PlainToInstance,
   PlainToInstanceList,
 } from 'src/helpers';

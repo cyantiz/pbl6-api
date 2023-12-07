@@ -8,24 +8,37 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
   ValidationPipe,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiConsumes,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
 import { user } from '@prisma/client';
-import { APISummaries, PaginationQuery } from 'src/helpers';
-import { GetUser } from 'src/modules/auth/decorator/get-user.decorator';
+import { MessageRespDto } from 'src/base/dto';
+import { MessageRespModel } from 'src/base/mode';
+import { PaginationQuery } from 'src/base/query';
+import { APISummaries } from 'src/helpers';
+import { FastifyFileInterceptor } from 'src/interceptor/file.interceptor';
+import { GetAuthData } from 'src/modules/auth/decorator/get-auth-data.decorator';
 import { AdminGuard, UserGuard } from 'src/modules/auth/guard/auth.guard';
-import { BanUserDto, UpdateUserDto } from './dto/user.dto';
+import { CreateMediaDto } from '../media/dto/req.dto';
+import {
+  ApproveEditorRegisterRequestDto,
+  BanUserDto,
+  CreateEditorRegisterRequestDto,
+  UpdateUserDto,
+} from './dto/user.dto';
 import { UserModel } from './model/user.model';
 import { UserService } from './user.service';
 
-type UserType = Pick<user, 'role' | 'id' | 'username' | 'email'>;
+type AuthData = Pick<user, 'role' | 'id' | 'username' | 'email'>;
 
 @ApiTags('USER')
 @Controller('users')
@@ -50,13 +63,13 @@ export class UserController {
   @ApiBearerAuth()
   @UseGuards(UserGuard)
   @Get('info/:username')
-  getUserByUsername(
+  GetAuthDataByUsername(
     @Param('username') username: string,
-    @GetUser() user: UserType,
+    @GetAuthData() authData: AuthData,
   ): Promise<UserModel> {
-    return this.userService.getUserByUsername(username, {
-      role: user.role,
-      username: user.username,
+    return this.userService.GetAuthDataByUsername(username, {
+      role: authData.role,
+      username: authData.username,
     });
   }
 
@@ -69,12 +82,47 @@ export class UserController {
   updateUser(
     @Param('username') username: string,
     @Body() dto: UpdateUserDto,
-    @GetUser() user: UserType,
+    @GetAuthData() authData: AuthData,
   ): Promise<UserModel> {
     return this.userService.updateUser(username, dto, {
-      role: user.role,
-      username: user.username,
+      role: authData.role,
+      username: authData.username,
     });
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.USER })
+  @ApiOkResponse({ type: MessageRespModel })
+  @ApiBearerAuth()
+  @UseGuards(UserGuard)
+  @Post('/editor-register-request')
+  async createEditorRegisterRequest(
+    @Body() dto: CreateEditorRegisterRequestDto,
+    @GetAuthData() authData: AuthData,
+  ) {
+    await this.userService.createEditorRegisterRequest(dto, {
+      userId: authData.id,
+    });
+
+    return new MessageRespModel(
+      "Your request has been sent. We'll contact you soon.",
+    );
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.ADMIN })
+  @ApiOkResponse({ type: MessageRespModel })
+  @ApiBearerAuth()
+  @UseGuards(AdminGuard)
+  @Post('/editor-register-request/approve')
+  async approveEditorRegisterRequest(
+    @Body() dto: ApproveEditorRegisterRequestDto,
+  ) {
+    await this.userService.approveEditorRegisterRequest(dto);
+
+    return new MessageRespModel(
+      'Approve Editor register request successfully.',
+    );
   }
 
   // @HttpCode(HttpStatus.OK)
@@ -85,7 +133,7 @@ export class UserController {
   // @Delete(':username')
   // deleteUser(
   //   @Param('username') username: string,
-  //   @GetUser() user: UserType,
+  //   @GetAuthData() authData: AuthData,
   // ): Promise<string> {
   //   return this.userService.deleteUser(username, {
   //     role: user.role,
@@ -109,10 +157,28 @@ export class UserController {
   @ApiBearerAuth()
   @UseGuards(UserGuard)
   @Post('verify')
-  verifyUser(@GetUser() user: UserType): Promise<string> {
+  verifyUser(@GetAuthData() authData: AuthData): Promise<string> {
     return this.userService.verifyUser({
-      email: user.email,
-      username: user.username,
+      email: authData.email,
+      username: authData.username,
+    });
+  }
+
+  @ApiOkResponse({
+    type: MessageRespDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FastifyFileInterceptor('filename'))
+  @Post('/')
+  async changeAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: CreateMediaDto,
+    @GetAuthData() authData: AuthData,
+  ) {
+    return this.userService.changeAvatar({
+      file,
+      userId: authData.id,
     });
   }
 }

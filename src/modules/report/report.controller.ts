@@ -19,15 +19,16 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { user } from '@prisma/client';
-import { APISummaries, PaginationQuery } from 'src/helpers';
-import { GetUser } from 'src/modules/auth/decorator/get-user.decorator';
+import { PaginationQuery } from 'src/base/query';
+import { APISummaries } from 'src/helpers';
+import {
+  AuthData,
+  GetAuthData,
+} from 'src/modules/auth/decorator/get-auth-data.decorator';
 import { AdminGuard, UserGuard } from 'src/modules/auth/guard/auth.guard';
 import { HandleReportDto, ReportDto } from './dto/report.dto';
 import { ReportModel } from './model/report.model';
 import { ReportService } from './report.service';
-
-type UserType = Pick<user, 'role' | 'id' | 'username'>;
 
 @ApiTags('REPORT')
 @Controller('report')
@@ -42,12 +43,12 @@ export class ReportController {
   @Get()
   getAllReports(
     @Query(new ValidationPipe({ transform: true })) query: PaginationQuery,
-    @GetUser() user: UserType,
+    @GetAuthData() authData: AuthData,
   ): Promise<ReportModel[]> {
     return this.reportService.getAllReports(query, {
-      role: user.role,
-      username: user.username,
-      userId: user.id,
+      role: authData.role,
+      username: authData.username,
+      userId: authData.id,
     });
   }
 
@@ -59,12 +60,12 @@ export class ReportController {
   @Get(':id')
   getReportById(
     @Param('id', ParseIntPipe) id: number,
-    @GetUser() user: UserType,
+    @GetAuthData() authData: AuthData,
   ): Promise<ReportModel> {
     return this.reportService.getReportById(id, {
-      role: user.role,
-      userId: user.id,
-      username: user.username,
+      role: authData.role,
+      userId: authData.id,
+      username: authData.username,
     });
   }
 
@@ -76,12 +77,12 @@ export class ReportController {
   @Post()
   createReport(
     @Body() dto: ReportDto,
-    @GetUser() user: UserType,
+    @GetAuthData() authData: AuthData,
   ): Promise<ReportModel> {
     return this.reportService.createReport(dto, {
-      role: user.role,
-      userId: user.id,
-      username: user.username,
+      role: authData.role,
+      userId: authData.id,
+      username: authData.username,
     });
   }
 

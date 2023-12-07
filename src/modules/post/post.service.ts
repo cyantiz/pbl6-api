@@ -4,20 +4,26 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, category, subcategory } from '@prisma/client';
-import { pick } from 'lodash';
-import { PostStatus } from 'src/enum/post.enum';
-import { Role } from 'src/enum/role.enum';
 import {
+  category,
+  PostStatus,
+  Prisma,
+  Role,
+  subcategory,
+} from '@prisma/client';
+import { pick } from 'lodash';
+import { PaginationQuery } from 'src/base/query';
+import {
+  getSlug,
   PaginationHandle,
-  PaginationQuery,
   PlainToInstance,
   PlainToInstanceList,
 } from 'src/helpers';
-import { MediaService } from 'src/media/media.service';
+import { MediaService } from 'src/modules/media/media.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
+import { getPaginationInfo } from './../../helpers/prisma';
 import { CreateChangeRequestDto, CreatePostDto } from './req.dto';
-import { ExtendedPostRespDto } from './res.dto';
+import { ExtendedPostRespDto, GetPostsByFilterRespDto } from './res.dto';
 
 @Injectable()
 export class PostService {
@@ -72,9 +78,9 @@ export class PostService {
     return { category, subcategories };
   }
 
-  private async verifyPostAccessible(params: {
+  private async verifyPermissionAdjustPost(params: {
     postId: number;
-    role?: string;
+    role?: Role;
     userId?: number;
   }) {
     const { postId, role, userId } = params;
@@ -83,13 +89,14 @@ export class PostService {
 
     if (!post) throw new NotFoundException('Post not found');
 
-    if ([Role.ADMIN, Role.MODERATOR].includes(role as Role)) return post;
+    const alwaysPermittedRoles: Role[] = [Role.ADMIN, Role.MODERATOR];
+    const isAuthor = post.author.id === userId;
 
-    if (post.userId !== userId) {
+    if (isAuthor || alwaysPermittedRoles.includes(role)) return post;
+
+    if (!isAuthor) {
       throw new UnauthorizedException('Permission denied');
     }
-
-    return post;
   }
 
   async get(
@@ -98,7 +105,7 @@ export class PostService {
       category?: string[];
       userId?: number;
     } & PaginationQuery,
-  ): Promise<ExtendedPostRespDto[]> {
+  ): Promise<GetPostsByFilterRespDto> {
     const { status, category, page, pageSize, userId } = params;
     const dbQuery: Prisma.postFindManyArgs = {
       where: {
@@ -120,9 +127,17 @@ export class PostService {
 
     PaginationHandle(dbQuery, page, pageSize);
 
-    const posts = await this.prismaService.post.findMany(dbQuery);
+    const [count, posts] = await this.prismaService.$transaction([
+      this.prismaService.post.count({
+        where: dbQuery.where,
+      }),
+      this.prismaService.post.findMany(dbQuery),
+    ]);
 
-    return PlainToInstanceList(ExtendedPostRespDto, posts);
+    return PlainToInstance(GetPostsByFilterRespDto, {
+      posts,
+      ...getPaginationInfo({ count, page, pageSize }),
+    });
   }
 
   async getById(id: number): Promise<ExtendedPostRespDto> {
@@ -139,6 +154,24 @@ export class PostService {
     });
 
     if (!post) throw new NotFoundException('Post not found');
+
+    return PlainToInstance(ExtendedPostRespDto, post);
+  }
+
+  async getBySlug(slug: string): Promise<ExtendedPostRespDto> {
+    const post = await this.prismaService.post.findFirst({
+      where: {
+        slug,
+      },
+      include: {
+        author: true,
+        category: true,
+        visits: true,
+        thumbnailMedia: true,
+      },
+    });
+
+    if (!post?.id) throw new NotFoundException('Post not found');
 
     return PlainToInstance(ExtendedPostRespDto, post);
   }
@@ -210,25 +243,48 @@ export class PostService {
     return PlainToInstanceList(ExtendedPostRespDto, posts);
   }
 
+  private verifyPermissionToCreate({ role }: { role?: Role }) {
+    const permittedRoles: Role[] = [Role.ADMIN, Role.MODERATOR, Role.EDITOR];
+
+    const permitted = permittedRoles.includes(role);
+
+    if (!permitted) throw new UnauthorizedException('Permission denied!');
+  }
+
+  private async verifyUniqueSlug(slug: string) {
+    const existed = await this.prismaService.post.findFirst({
+      where: {
+        slug,
+      },
+    });
+
+    if (!!existed)
+      throw new BadRequestException(
+        'Title is duplicated with another post, please change it!',
+      );
+
+    return;
+  }
+
   async create(
     dto: CreatePostDto,
     thumbnailFile: Express.Multer.File,
     authData: {
-      role?: string;
+      role?: Role;
       username?: string;
       userId?: number;
     },
   ): Promise<ExtendedPostRespDto> {
-    const permitted = [Role.ADMIN, Role.MODERATOR, Role.EDITOR].includes(
-      authData.role as Role,
-    );
-
-    if (!permitted) throw new UnauthorizedException('Permission denied!');
+    this.verifyPermissionToCreate({ role: authData.role });
 
     const { category, subcategories } = await this.checkCatSubCat(
       +dto.categoryId,
       dto.subcategoryIds ? dto.subcategoryIds.map((id) => +id) : undefined,
     );
+
+    const slug = getSlug(dto.title, '-');
+
+    await this.verifyUniqueSlug(slug);
 
     const thumbnailMedia = await this.mediaService.create({
       file: thumbnailFile,
@@ -240,6 +296,7 @@ export class PostService {
       data: {
         title: dto.title,
         body: dto.body,
+        slug,
         thumbnailMedia: {
           connect: {
             id: thumbnailMedia.id,
@@ -250,15 +307,22 @@ export class PostService {
             id: authData.userId,
           },
         },
-        subcategories: subcategories.length
-          ? {
-              connect: pick(subcategories, 'id'),
-            }
-          : undefined,
         category: {
           connect: pick(category, 'id'),
         },
+        status: dto.status,
+        createdAt: new Date(),
+        publishedAt: dto.status === PostStatus.PUBLISHED ? new Date() : null,
       },
+    });
+
+    const postSubcategories = subcategories.map((subcat) => ({
+      postId: post.id,
+      subcategoryId: subcat.id,
+    }));
+
+    await this.prismaService.post_subcategory.createMany({
+      data: postSubcategories,
     });
 
     return PlainToInstance(ExtendedPostRespDto, post);
@@ -267,12 +331,12 @@ export class PostService {
   async deletePostById(
     postId: number,
     authData: {
-      role?: string;
+      role?: Role;
       username?: string;
       userId?: number;
     },
   ): Promise<void> {
-    const post = await this.verifyPostAccessible({
+    const post = await this.verifyPermissionAdjustPost({
       postId,
       role: authData.role,
       userId: authData.userId,
@@ -288,12 +352,12 @@ export class PostService {
   async createChangeRequest(
     dto: CreateChangeRequestDto,
     authData: {
-      role?: string;
+      role?: Role;
       username?: string;
       userId?: number;
     },
   ): Promise<void> {
-    const post = await this.verifyPostAccessible({
+    const post = await this.verifyPermissionAdjustPost({
       postId: dto.postId,
       role: authData.role,
       userId: authData.userId,
@@ -311,32 +375,9 @@ export class PostService {
             id: post.id,
           },
           data: {
-            status: PostStatus.PENDING,
+            status: PostStatus.DRAFT,
           },
         });
-
-      case PostStatus.PENDING:
-        await this.prismaService.post.update({
-          where: {
-            id: post.id,
-          },
-          data: {
-            title: dto.title ?? undefined,
-            body: dto.body ?? undefined,
-            category: dto.categoryId
-              ? {
-                  connect: category,
-                }
-              : undefined,
-            subcategories:
-              dto.subcategoryIds?.length > 0
-                ? {
-                    connect: subcategories,
-                  }
-                : undefined,
-          },
-        });
-
         break;
 
       case PostStatus.DELETED:
@@ -366,39 +407,5 @@ export class PostService {
 
         break;
     }
-  }
-
-  async approvePost(
-    postId: number,
-    authData: {
-      role?: string;
-      username?: string;
-      userId?: number;
-    },
-  ): Promise<void> {
-    const post = await this.verifyPostAccessible({
-      postId,
-      role: authData.role,
-      userId: authData.userId,
-    });
-
-    const permitted = [Role.ADMIN, Role.MODERATOR].includes(
-      authData.role as Role,
-    );
-
-    if (!permitted) throw new UnauthorizedException('Permission denied!');
-
-    if (post.status !== PostStatus.PENDING)
-      throw new BadRequestException('Post is not pending');
-
-    await this.prismaService.post.update({
-      where: {
-        id: post.id,
-      },
-      data: {
-        status: PostStatus.PUBLISHED,
-        approverId: authData.userId,
-      },
-    });
   }
 }

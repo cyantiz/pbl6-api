@@ -23,15 +23,16 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { user } from '@prisma/client';
-import { PostStatus } from 'src/enum/post.enum';
-import { Role } from 'src/enum/role.enum';
+import { PostStatus, Role } from '@prisma/client';
+import { MessageRespDto } from 'src/base/dto';
+import { PaginationQuery } from 'src/base/query';
 import { APISummaries, PlainToInstance } from 'src/helpers';
-import { MessageModel, PaginationQuery } from 'src/helpers/prisma';
 import { FastifyFileInterceptor } from 'src/interceptor/file.interceptor';
-import { GetUser } from 'src/modules/auth/decorator/get-user.decorator';
+import {
+  AuthData,
+  GetAuthData,
+} from 'src/modules/auth/decorator/get-auth-data.decorator';
 import { EditorGuard, UserGuard } from 'src/modules/auth/guard/auth.guard';
-import { ModeratorGuard } from './../auth/guard/auth.guard';
 import { PostService } from './post.service';
 import {
   CreateChangeRequestDto,
@@ -39,9 +40,7 @@ import {
   GetPopularPostsQuery,
   GetPostsQuery,
 } from './req.dto';
-import { ExtendedPostRespDto } from './res.dto';
-
-type UserType = Pick<user, 'role' | 'id' | 'username'>;
+import { ExtendedPostRespDto, GetPostsByFilterRespDto } from './res.dto';
 
 @Controller('post')
 @ApiTags('POST')
@@ -54,9 +53,9 @@ export class PostController {
   @Get()
   async getPosts(
     @Query(new ValidationPipe({ transform: true })) query: GetPostsQuery,
-    @GetUser() user: UserType,
-  ): Promise<ExtendedPostRespDto[]> {
-    const isAdmin = user?.role === Role.ADMIN;
+    @GetAuthData() authData: AuthData,
+  ): Promise<GetPostsByFilterRespDto> {
+    const isAdmin = authData?.role === Role.ADMIN;
 
     query.status = isAdmin ? query.status ?? undefined : PostStatus.PUBLISHED;
     if (!Array.isArray(query.category)) query.category = [query.category];
@@ -72,11 +71,28 @@ export class PostController {
   @Get(':id')
   async getPostById(
     @Param('id', ParseIntPipe) postId: number,
-    @GetUser() user: UserType,
+    @GetAuthData() authData: AuthData,
   ): Promise<ExtendedPostRespDto> {
     const post = await this.postService.getById(postId);
 
-    if (user?.role !== Role.ADMIN && post.status !== PostStatus.PUBLISHED) {
+    if (authData?.role !== Role.ADMIN && post.status !== PostStatus.PUBLISHED) {
+      throw new NotFoundException('Post not found');
+    }
+
+    return post;
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.UNAUTH })
+  @ApiOkResponse({ type: ExtendedPostRespDto })
+  @Get('slug/:slug')
+  async getPostBySlug(
+    @Param('slug') slug: string,
+    @GetAuthData() authData: AuthData,
+  ): Promise<ExtendedPostRespDto> {
+    const post = await this.postService.getBySlug(slug);
+
+    if (authData?.role !== Role.ADMIN && post.status !== PostStatus.PUBLISHED) {
       throw new NotFoundException('Post not found');
     }
 
@@ -94,12 +110,12 @@ export class PostController {
   async createPost(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: CreatePostDto,
-    @GetUser() user: UserType,
+    @GetAuthData() authData: AuthData,
   ): Promise<ExtendedPostRespDto> {
     return this.postService.create(dto, file, {
-      role: user.role,
-      username: user.username,
-      userId: user.id,
+      role: authData.role,
+      username: authData.username,
+      userId: authData.id,
     });
   }
 
@@ -111,15 +127,15 @@ export class PostController {
   @Delete('id')
   async deletePostById(
     @Param('id', ParseIntPipe) postId: number,
-    @GetUser() user: UserType,
-  ): Promise<MessageModel> {
+    @GetAuthData() authData: AuthData,
+  ): Promise<MessageRespDto> {
     await this.postService.deletePostById(postId, {
-      role: user.role,
-      username: user.username,
-      userId: user.id,
+      role: authData.role,
+      username: authData.username,
+      userId: authData.id,
     });
 
-    return PlainToInstance(MessageModel, { message: 'Deleted successfully' });
+    return PlainToInstance(MessageRespDto, { message: 'Deleted successfully' });
   }
 
   @HttpCode(HttpStatus.OK)
@@ -130,35 +146,33 @@ export class PostController {
   @Put()
   async createChangeRequest(
     @Body() dto: CreateChangeRequestDto,
-    @GetUser() user: UserType,
-  ): Promise<MessageModel> {
+    @GetAuthData() authData: AuthData,
+  ): Promise<MessageRespDto> {
     await this.postService.createChangeRequest(dto, {
-      role: user.role,
-      username: user.username,
-      userId: user.id,
+      role: authData.role,
+      username: authData.username,
+      userId: authData.id,
     });
 
-    return PlainToInstance(MessageModel, {
+    return PlainToInstance(MessageRespDto, {
       message: 'Changes have been requested',
     });
   }
 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: APISummaries.EDITOR })
-  @ApiOkResponse({ type: [ExtendedPostRespDto] })
+  @ApiOkResponse({ type: [GetPostsByFilterRespDto] })
   @ApiBearerAuth()
   @UseGuards(EditorGuard)
   @Get('/mine')
   async getMyPosts(
     @Query() query: PaginationQuery,
-    @GetUser() user: UserType,
-  ): Promise<ExtendedPostRespDto[]> {
-    const posts = await this.postService.get({
-      userId: user.id,
+    @GetAuthData() authData: AuthData,
+  ): Promise<GetPostsByFilterRespDto> {
+    return await this.postService.get({
+      userId: authData.id,
       ...query,
     });
-
-    return posts;
   }
 
   @HttpCode(HttpStatus.OK)
@@ -183,26 +197,5 @@ export class PostController {
     const post = await this.postService.getFrontPagePost();
 
     return post;
-  }
-
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: APISummaries.MODERATOR })
-  @ApiOkResponse({ type: MessageModel })
-  @ApiBearerAuth()
-  @UseGuards(ModeratorGuard)
-  @Put('/:id/approve')
-  async approvePost(
-    @Param('id', ParseIntPipe) postId: number,
-    @GetUser() user: UserType,
-  ): Promise<MessageModel> {
-    await this.postService.approvePost(postId, {
-      role: user.role,
-      username: user.username,
-      userId: user.id,
-    });
-
-    return PlainToInstance(MessageModel, {
-      message: 'Approved',
-    });
   }
 }

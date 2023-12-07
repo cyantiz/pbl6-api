@@ -1,17 +1,18 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Role } from 'src/enum/role.enum';
+import { Role } from '@prisma/client';
+import { PaginationQuery } from 'src/base/query';
 import {
   ErrorMessages,
+  genRandomString,
   PaginationHandle,
-  PaginationQuery,
   PlainToInstance,
   PlainToInstanceList,
-  genRandomString,
   sensitiveFields,
 } from 'src/helpers';
 import { MailService } from 'src/modules/mail/mail.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
+import { MediaService } from '../media/media.service';
 import { UpdateUserDto } from './dto/user.dto';
 import { UserModel } from './model/user.model';
 
@@ -21,6 +22,7 @@ export class UserService {
     private prismaService: PrismaService,
     private mailService: MailService,
     private configService: ConfigService,
+    private mediaService: MediaService,
   ) {}
 
   private async checkVerifiedUser(username: string): Promise<boolean> {
@@ -47,7 +49,7 @@ export class UserService {
     return PlainToInstanceList(UserModel, users);
   }
 
-  async getUserByUsername(
+  async GetAuthDataByUsername(
     username: string,
     user: {
       role: string;
@@ -199,5 +201,89 @@ export class UserService {
     );
 
     return 'Verification email sended';
+  }
+
+  async changeAvatar(params: { file: Express.Multer.File; userId: number }) {
+    const { file, userId } = params;
+    const newMedia = await this.mediaService.create({
+      file,
+    });
+
+    await this.prismaService.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        avatarUrl: await this.mediaService.getMediaUrl(newMedia),
+      },
+    });
+  }
+
+  async createEditorRegisterRequest(
+    params: {
+      message: string;
+    },
+    authData: {
+      userId: number;
+    },
+  ) {
+    const { message } = params;
+    const { userId } = authData;
+
+    const existedUser = await this.prismaService.user.findFirst({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!existedUser)
+      throw new BadRequestException(ErrorMessages.USER.USER_INVALID);
+
+    await this.prismaService.editor_reg_request.create({
+      data: {
+        message,
+        userId,
+      },
+    });
+  }
+
+  async approveEditorRegisterRequest(params: { id: number }) {
+    const req = await this.prismaService.editor_reg_request.findFirst({
+      where: {
+        id: params.id,
+      },
+    });
+
+    if (!req)
+      throw new BadRequestException(
+        ErrorMessages.USER.EDITOR_REG_REQUEST_INVALID,
+      );
+
+    const existedUser = await this.prismaService.user.findFirst({
+      where: {
+        id: req.userId,
+      },
+    });
+
+    if (!existedUser)
+      throw new BadRequestException(ErrorMessages.USER.USER_INVALID);
+
+    await this.prismaService.user.update({
+      where: {
+        id: req.userId,
+      },
+      data: {
+        role: Role.EDITOR,
+      },
+    });
+
+    await this.prismaService.editor_reg_request.update({
+      where: {
+        id: params.id,
+      },
+      data: {
+        approvedAt: new Date(),
+      },
+    });
   }
 }

@@ -13,6 +13,7 @@ CREATE TABLE `user` (
     `verifyToken` VARCHAR(191) NULL,
     `isVerified` BOOLEAN NOT NULL DEFAULT false,
     `verifiedAt` DATETIME(3) NULL,
+    `promotedAt` DATETIME(3) NULL,
 
     UNIQUE INDEX `user_username_key`(`username`),
     UNIQUE INDEX `user_email_key`(`email`),
@@ -23,19 +24,23 @@ CREATE TABLE `user` (
 CREATE TABLE `post` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `title` VARCHAR(191) NOT NULL,
+    `slug` VARCHAR(191) NOT NULL,
     `secondaryText` TEXT NULL,
     `body` TEXT NOT NULL,
     `userId` INTEGER NOT NULL,
-    `approverId` INTEGER NULL,
-    `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `categoryId` INTEGER NULL,
+    `status` ENUM('DRAFT', 'DELETED', 'PUBLISHED', 'DENIED') NOT NULL DEFAULT 'DRAFT',
     `upvote` INTEGER NOT NULL DEFAULT 0,
     `downvote` INTEGER NOT NULL DEFAULT 0,
+    `mongoOid` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NULL,
+    `publishedAt` DATETIME(3) NULL,
+    `unpublishedAt` DATETIME(3) NULL,
     `deletedAt` DATETIME(3) NULL,
-    `approvedAt` DATETIME(3) NULL,
-    `categoryId` INTEGER NULL,
     `thumbnailMediaId` INTEGER NULL,
 
+    UNIQUE INDEX `post_slug_key`(`slug`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -147,21 +152,76 @@ CREATE TABLE `change_request` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `editor_reg_request` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `userId` INTEGER NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `approvedAt` DATETIME(3) NULL,
+    `message` TEXT NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `media` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `fileName` TEXT NOT NULL,
+    `fileName` TEXT NULL,
+    `alt` TEXT NULL,
+    `externalUrl` TEXT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `_postTosubcategory` (
-    `A` INTEGER NOT NULL,
-    `B` INTEGER NOT NULL,
+CREATE TABLE `post_media` (
+    `postId` INTEGER NOT NULL,
+    `mediaId` INTEGER NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    UNIQUE INDEX `_postTosubcategory_AB_unique`(`A`, `B`),
-    INDEX `_postTosubcategory_B_index`(`B`)
+    PRIMARY KEY (`postId`, `mediaId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `post_subcategory` (
+    `postId` INTEGER NOT NULL,
+    `subcategoryId` INTEGER NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`postId`, `subcategoryId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `temp_article_from_mongo` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `title` TEXT NOT NULL,
+    `article` TEXT NOT NULL,
+    `sport_type` VARCHAR(191) NOT NULL,
+    `author` VARCHAR(191) NOT NULL,
+    `image_0_url` TEXT NULL,
+    `image_0_alt` TEXT NULL,
+    `image_1_url` TEXT NULL,
+    `image_1_alt` TEXT NULL,
+    `image_2_url` TEXT NULL,
+    `image_2_alt` TEXT NULL,
+    `image_3_url` TEXT NULL,
+    `image_3_alt` TEXT NULL,
+    `image_4_url` TEXT NULL,
+    `image_4_alt` TEXT NULL,
+    `image_5_url` TEXT NULL,
+    `image_5_alt` TEXT NULL,
+    `image_6_url` TEXT NULL,
+    `image_6_alt` TEXT NULL,
+    `image_7_url` TEXT NULL,
+    `image_7_alt` TEXT NULL,
+    `image_8_url` TEXT NULL,
+    `image_8_alt` TEXT NULL,
+    `image_9_url` TEXT NULL,
+    `image_9_alt` TEXT NULL,
+    `from` TEXT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
@@ -169,9 +229,6 @@ ALTER TABLE `post` ADD CONSTRAINT `post_thumbnailMediaId_fkey` FOREIGN KEY (`thu
 
 -- AddForeignKey
 ALTER TABLE `post` ADD CONSTRAINT `post_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `post` ADD CONSTRAINT `post_approverId_fkey` FOREIGN KEY (`approverId`) REFERENCES `user`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `post` ADD CONSTRAINT `post_categoryId_fkey` FOREIGN KEY (`categoryId`) REFERENCES `category`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -228,7 +285,16 @@ ALTER TABLE `change_request` ADD CONSTRAINT `change_request_postId_fkey` FOREIGN
 ALTER TABLE `change_request` ADD CONSTRAINT `change_request_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `_postTosubcategory` ADD CONSTRAINT `_postTosubcategory_A_fkey` FOREIGN KEY (`A`) REFERENCES `post`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `editor_reg_request` ADD CONSTRAINT `editor_reg_request_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `_postTosubcategory` ADD CONSTRAINT `_postTosubcategory_B_fkey` FOREIGN KEY (`B`) REFERENCES `subcategory`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `post_media` ADD CONSTRAINT `post_media_postId_fkey` FOREIGN KEY (`postId`) REFERENCES `post`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `post_media` ADD CONSTRAINT `post_media_mediaId_fkey` FOREIGN KEY (`mediaId`) REFERENCES `media`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `post_subcategory` ADD CONSTRAINT `post_subcategory_postId_fkey` FOREIGN KEY (`postId`) REFERENCES `post`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `post_subcategory` ADD CONSTRAINT `post_subcategory_subcategoryId_fkey` FOREIGN KEY (`subcategoryId`) REFERENCES `subcategory`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { media } from '@prisma/client';
 import { FirebaseService } from 'src/modules/firebase/firebase.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
-import { UpdateMediaDto } from './dto/req.dto';
+import { CreateMediaFromExternalURLDto, UpdateMediaDto } from './dto/req.dto';
 
 @Injectable()
 export class MediaService {
@@ -31,14 +31,32 @@ export class MediaService {
     return media;
   }
 
-  async getMediaUrl(id: number) {
-    const media: media = await this.prisma.media.findUnique({
-      where: {
-        id,
+  async createFromExternalUrl(params: CreateMediaFromExternalURLDto) {
+    const { url, alt } = params;
+
+    const media = await this.prisma.media.create({
+      data: {
+        externalUrl: url,
+        alt,
       },
     });
 
-    return this.getMediaUrlFromFileName(media.fileName);
+    return media;
+  }
+
+  async getMediaUrl(mediaId: number): Promise<string>;
+  async getMediaUrl(media: media): Promise<string>;
+  async getMediaUrl(input: number | media): Promise<string> {
+    if (typeof input === 'number') {
+      const media: media = await this.prisma.media.findUnique({
+        where: {
+          id: input,
+        },
+      });
+      return this.getMediaUrlFromFileName(media.fileName);
+    } else {
+      return this.getMediaUrlFromFileName(input.fileName);
+    }
   }
 
   getMediaUrlFromFileName(fileName: string) {

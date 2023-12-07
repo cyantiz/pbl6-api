@@ -46,9 +46,51 @@ export const seedCategories: Partial<category>[] = [
       'https://s3.amazonaws.com/usac-craft-uploads-production/assets/Road-Header.jpg',
     slug: 'cycling',
   },
+  {
+    name: 'Golf',
+    thumbnail:
+      'https://media.doanhnghiephoinhap.vn/uploads/2021/12/28/golf-3-1640652374.jpg',
+    slug: 'golf',
+  },
+  {
+    name: 'Martial Art',
+    thumbnail:
+      'https://www.liveabout.com/thmb/ynSv0MsmTQyRJGa3kxd7AZniuvk=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/GettyImages-95692353-57df21125f9b5865168e4a47.jpg',
+    slug: 'martial-art',
+  },
+  {
+    name: 'Behind-The-Scenes',
+    thumbnail:
+      'https://media.wired.co.uk/photos/606db75e938ecee6e930f63d/16:9/w_2560%2Cc_limit/Sky-Sports-UHD_033.jpg',
+    slug: 'behind-the-scences',
+  },
+  {
+    name: 'Marathon',
+    thumbnail:
+      'https://vcdn-thethao.vnecdn.net/2023/11/16/DSC05700-copy-2-copy-jpeg-4954-1700090722.jpg',
+    slug: 'marathon',
+  },
+  {
+    name: 'Track & Field',
+    thumbnail:
+      'https://img.olympics.com/images/image/private/t_s_w960/t_s_16_9_g_auto/f_auto/primary/hiuf5ahd3cbhr11q6m5m',
+    slug: 'track-and-field',
+  },
+  {
+    name: 'Racing',
+    thumbnail:
+      'https://vcdn-thethao.vnecdn.net/2021/09/27/2-9380-1632728460.jpg',
+    slug: 'racing',
+  },
+  {
+    name: 'Chess',
+    thumbnail:
+      'https://images.chesscomfiles.com/uploads/v1/blog/445588.dc6365b0.668x375o.f705fdd1d339@2x.jpeg',
+    slug: 'chess',
+  },
 ];
 
-const defaultHashedPassword =
+export const defaultHashedPassword =
   '$argon2id$v=19$m=65536,t=3,p=4$xMDOC2bczA7juS7hW682Cw$48Wij7VciKxHrdITuuYPAFQtlDVIm72mjGtdYAcATZw'; //await argon.hash('Default-Password123');
 export const seedUsers: Partial<user>[] = Array.from({ length: 10 }).map(
   (_, i) => ({

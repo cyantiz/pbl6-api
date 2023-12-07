@@ -1,7 +1,8 @@
 import { ApiProperty, IntersectionType } from '@nestjs/swagger';
 import { Expose, Transform } from 'class-transformer';
-import { PlainToInstance } from 'src/helpers';
-import { EMedia } from 'src/media/media.entity';
+import { PaginationRespDto } from 'src/base/dto';
+import { PlainToInstance, PlainToInstanceList } from 'src/helpers';
+import { EMedia } from 'src/modules/media/media.entity';
 import { ECategory } from '../category/category.entity';
 import { EPost, EPostAuthor } from './post.entity';
 
@@ -25,4 +26,11 @@ export class ExtendedPostRespDto extends IntersectionType(EPost) {
   @ApiProperty({ type: Number })
   @Transform(({ obj }) => obj.visits?.length)
   visitCount: number;
+}
+
+export class GetPostsByFilterRespDto extends PaginationRespDto {
+  @Expose()
+  @ApiProperty({ type: [ExtendedPostRespDto] })
+  @Transform(({ obj }) => PlainToInstanceList(ExtendedPostRespDto, obj?.posts))
+  values: ExtendedPostRespDto[];
 }

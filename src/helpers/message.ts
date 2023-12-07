@@ -14,8 +14,9 @@ export const ErrorMessages = {
   },
   USER: {
     USER_NOT_FOUND: 'User not found',
-    USER_INVALID: 'User invalid',
+    USER_INVALID: 'Invalid or not exist User',
     USER_INACTIVE: 'Please activate this user first',
+    EDITOR_REG_REQUEST_INVALID: 'Invalid Editor register request',
   },
   POST: {
     POST_NOT_FOUND: 'Post not found',

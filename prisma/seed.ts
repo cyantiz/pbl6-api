@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
+import { getSlug } from '../src/helpers/string';
+
 import {
   seedAdmins,
   seedCategories,
@@ -13,21 +15,29 @@ import {
 const prisma = new PrismaClient();
 
 async function main() {
-  seedCategories.forEach(async ({ name, slug, thumbnail }) => {
-    await prisma.category.upsert({
-      where: { slug: slug },
-      update: {},
-      create: {
-        name: name,
-        createdAt: new Date(),
-        slug: slug,
-        thumbnail: thumbnail,
-      },
-    });
-  });
+  console.log('SEED - START');
 
+  console.log('SEED - Delete all category and user');
+  await prisma.category.deleteMany({});
   await prisma.user.deleteMany({});
 
+  console.log('SEED -Seed category');
+  await prisma.$transaction([
+    ...seedCategories.map(({ name, thumbnail, slug }) =>
+      prisma.category.upsert({
+        where: { slug: slug },
+        update: {},
+        create: {
+          slug,
+          name,
+          thumbnail,
+          createdAt: new Date(),
+        },
+      }),
+    ),
+  ]);
+
+  console.log('SEED - Seed accounts');
   await prisma.$transaction(
     [...seedUsers, ...seedAdmins, ...seedModerators, ...seedEditors].map(
       (
@@ -62,6 +72,7 @@ async function main() {
     ),
   );
 
+  console.log('SEED - Seed media');
   await prisma.$transaction([
     ...seedMedias.map(({ createdAt, fileName }, index) =>
       prisma.media.upsert({
@@ -75,6 +86,7 @@ async function main() {
     ),
   ]);
 
+  console.log('SEED - Seed posts');
   await prisma.$transaction([
     prisma.post.deleteMany({}),
     ...seedPosts.map(
@@ -87,6 +99,7 @@ async function main() {
             id: index + 1,
             thumbnailMediaId: 1,
             title,
+            slug: getSlug(title, '-'),
             body,
             secondaryText,
             userId,
@@ -98,6 +111,7 @@ async function main() {
     ),
   ]);
 
+  console.log('SEED - Seed visits');
   await prisma.$transaction([
     ...seedVisits.map(({ postId, userId, percentage, IP }, index) =>
       prisma.visit.create({
@@ -112,6 +126,8 @@ async function main() {
       }),
     ),
   ]);
+
+  console.log('Done seeding');
 }
 
 main()

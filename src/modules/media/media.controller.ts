@@ -8,10 +8,10 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiConsumes, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { MessageModel } from 'src/helpers';
+import { MessageRespDto } from 'src/base/dto';
 import { FastifyFileInterceptor } from 'src/interceptor/file.interceptor';
-import { FirebaseService } from './../modules/firebase/firebase.service';
-import { CreateMediaDto } from './dto/req.dto';
+import { FirebaseService } from '../firebase/firebase.service';
+import { CreateMediaDto, CreateMediaFromExternalURLDto } from './dto/req.dto';
 import { MediaService } from './media.service';
 
 @Controller('media')
@@ -22,7 +22,9 @@ export class MediaController {
     private readonly firebaseService: FirebaseService,
   ) {}
 
-  @ApiOkResponse({ type: MessageModel })
+  @ApiOkResponse({
+    type: MessageRespDto,
+  })
   @HttpCode(HttpStatus.OK)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FastifyFileInterceptor('filename'))
@@ -34,5 +36,14 @@ export class MediaController {
     return this.mediaService.create({
       file,
     });
+  }
+
+  @ApiOkResponse({
+    type: MessageRespDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  @Post('/external-url')
+  async createMediaFromExternalUrl(@Body() dto: CreateMediaFromExternalURLDto) {
+    return this.mediaService.createFromExternalUrl(dto);
   }
 }
