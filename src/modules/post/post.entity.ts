@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
+import { Expose, Transform } from 'class-transformer';
 
 export class EPost {
   @Expose()
@@ -16,6 +16,12 @@ export class EPost {
 
   @Expose()
   @ApiProperty({ type: String })
+  @Transform(({ obj }) => {
+    return obj.body
+      .split('\n')
+      .map((line) => `<p>${line}</p>`)
+      .join('');
+  })
   body: string;
 
   @Expose()

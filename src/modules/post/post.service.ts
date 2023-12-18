@@ -1,9 +1,11 @@
+import { HttpService } from '@nestjs/axios';
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   category,
   PostStatus,
@@ -13,24 +15,24 @@ import {
 } from '@prisma/client';
 import { pick } from 'lodash';
 import { PaginationQuery } from 'src/base/query';
-import {
-  getSlug,
-  PaginationHandle,
-  PlainToInstance,
-  PlainToInstanceList,
-} from 'src/helpers';
+import { getSlug, PlainToInstance, PlainToInstanceList } from 'src/helpers';
 import { MediaService } from 'src/modules/media/media.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
-import { getPaginationInfo } from './../../helpers/prisma';
-import { CreateChangeRequestDto, CreatePostDto } from './req.dto';
-import { ExtendedPostRespDto, GetPostsByFilterRespDto } from './res.dto';
+import { getPaginationInfo, PaginationHandle } from './../../helpers/prisma';
+import { CreateChangeRequestDto, CreatePostDto } from './dto/req.dto';
+import { ExtendedPostRespDto, GetPostsRespDto } from './dto/res.dto';
 
 @Injectable()
 export class PostService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly mediaService: MediaService,
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
   ) {}
+
+  private searchHost = this.configService.get<string>('search.host');
+  private searchPort = this.configService.get<number>('search.port');
 
   private async findCategoryById(categoryId: number): Promise<category> {
     return await this.prismaService.category.findFirst({
@@ -38,6 +40,30 @@ export class PostService {
         id: categoryId,
       },
     });
+  }
+
+  async verifyPermissionToReadPost(params: {
+    postId?: number;
+    slug?: string;
+    role?: Role;
+    userId?: number;
+  }) {
+    const { role, userId, postId, slug } = params;
+
+    if (!postId && !slug) throw new BadRequestException('Post not found');
+
+    const post = postId
+      ? await this.getById(postId)
+      : await this.getBySlug(slug);
+
+    const isAdministrator = role === Role.ADMIN;
+    const isAuthor = userId === post.userId;
+
+    if (!isAdministrator && !isAuthor && post.status !== PostStatus.PUBLISHED) {
+      throw new NotFoundException('Post not found');
+    }
+
+    return post;
   }
 
   private async findSubCategoriesByIds(
@@ -78,7 +104,7 @@ export class PostService {
     return { category, subcategories };
   }
 
-  private async verifyPermissionAdjustPost(params: {
+  private async verifyPermissionToAdjustPost(params: {
     postId: number;
     role?: Role;
     userId?: number;
@@ -94,9 +120,7 @@ export class PostService {
 
     if (isAuthor || alwaysPermittedRoles.includes(role)) return post;
 
-    if (!isAuthor) {
-      throw new UnauthorizedException('Permission denied');
-    }
+    throw new UnauthorizedException('Permission denied');
   }
 
   async get(
@@ -105,16 +129,19 @@ export class PostService {
       category?: string[];
       userId?: number;
     } & PaginationQuery,
-  ): Promise<GetPostsByFilterRespDto> {
+  ): Promise<GetPostsRespDto> {
     const { status, category, page, pageSize, userId } = params;
+
     const dbQuery: Prisma.postFindManyArgs = {
       where: {
         status: status ?? undefined,
-        category: category && {
-          slug: {
-            in: category,
-          },
-        },
+        category: category?.length
+          ? {
+              slug: {
+                in: category,
+              },
+            }
+          : undefined,
         userId: userId ?? undefined,
       },
       include: {
@@ -122,10 +149,20 @@ export class PostService {
         category: true,
         visits: true,
         thumbnailMedia: true,
+        post_media: {
+          include: {
+            media: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     };
 
     PaginationHandle(dbQuery, page, pageSize);
+
+    console.log('query', JSON.stringify(dbQuery));
 
     const [count, posts] = await this.prismaService.$transaction([
       this.prismaService.post.count({
@@ -134,7 +171,8 @@ export class PostService {
       this.prismaService.post.findMany(dbQuery),
     ]);
 
-    return PlainToInstance(GetPostsByFilterRespDto, {
+    console.log(posts);
+    return PlainToInstance(GetPostsRespDto, {
       posts,
       ...getPaginationInfo({ count, page, pageSize }),
     });
@@ -150,6 +188,11 @@ export class PostService {
         category: true,
         visits: true,
         thumbnailMedia: true,
+        post_media: {
+          include: {
+            media: true,
+          },
+        },
       },
     });
 
@@ -168,12 +211,52 @@ export class PostService {
         category: true,
         visits: true,
         thumbnailMedia: true,
+        post_media: {
+          include: {
+            media: true,
+          },
+        },
       },
     });
 
     if (!post?.id) throw new NotFoundException('Post not found');
 
     return PlainToInstance(ExtendedPostRespDto, post);
+  }
+
+  async getFromSearch(
+    text: string,
+    limit = 10,
+  ): Promise<ExtendedPostRespDto[]> {
+    const { data } = await this.httpService.axiosRef.get(
+      `${this.searchHost}:${this.searchPort}/text-search?query=${text}&limit=${limit}`,
+    );
+
+    console.log(
+      `${this.searchHost}:${this.searchPort}/text-search?query=${text}&limit=${limit}`,
+    );
+    const slugs = data.map((item) => getSlug(item.title));
+
+    const posts = await this.prismaService.post.findMany({
+      where: {
+        slug: {
+          in: slugs,
+        },
+      },
+      include: {
+        author: true,
+        category: true,
+        visits: true,
+        thumbnailMedia: true,
+        post_media: {
+          include: {
+            media: true,
+          },
+        },
+      },
+    });
+
+    return PlainToInstanceList(ExtendedPostRespDto, posts);
   }
 
   /**
@@ -196,6 +279,11 @@ export class PostService {
         category: true,
         author: true,
         thumbnailMedia: true,
+        post_media: {
+          include: {
+            media: true,
+          },
+        },
       },
       orderBy: {
         visits: {
@@ -230,6 +318,11 @@ export class PostService {
         category: true,
         author: true,
         thumbnailMedia: true,
+        post_media: {
+          include: {
+            media: true,
+          },
+        },
       },
       orderBy: {
         visits: {
@@ -336,7 +429,7 @@ export class PostService {
       userId?: number;
     },
   ): Promise<void> {
-    const post = await this.verifyPermissionAdjustPost({
+    const post = await this.verifyPermissionToAdjustPost({
       postId,
       role: authData.role,
       userId: authData.userId,
@@ -357,7 +450,7 @@ export class PostService {
       userId?: number;
     },
   ): Promise<void> {
-    const post = await this.verifyPermissionAdjustPost({
+    const post = await this.verifyPermissionToAdjustPost({
       postId: dto.postId,
       role: authData.role,
       userId: authData.userId,

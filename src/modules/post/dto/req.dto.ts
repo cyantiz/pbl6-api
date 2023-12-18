@@ -26,6 +26,12 @@ export class GetPostsQuery extends PaginationQuery {
   category?: string[];
 }
 
+export class GetPublishedPostsQuery extends PaginationQuery {
+  @IsOptional()
+  @ApiProperty({ type: [String], required: false, nullable: true })
+  category?: string[];
+}
+
 export class CreatePostDto extends IntersectionType(UploadFileDto) {
   @IsNotEmpty()
   @IsString()
@@ -96,4 +102,16 @@ export class GetPopularPostsQuery {
     default: 5,
   })
   limit: number;
+}
+
+export class GetMyPostsQuery extends PaginationQuery {
+  @IsOptional()
+  @IsEnum(PostStatus)
+  @ApiProperty({
+    type: String,
+    enum: PostStatus,
+    default: PostStatus.PUBLISHED,
+    required: false,
+  })
+  status? = PostStatus.PUBLISHED;
 }

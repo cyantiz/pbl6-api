@@ -24,7 +24,7 @@ import { user } from '@prisma/client';
 import { MessageRespDto } from 'src/base/dto';
 import { MessageRespModel } from 'src/base/mode';
 import { PaginationQuery } from 'src/base/query';
-import { APISummaries } from 'src/helpers';
+import { APISummaries, PlainToInstance } from 'src/helpers';
 import { FastifyFileInterceptor } from 'src/interceptor/file.interceptor';
 import { GetAuthData } from 'src/modules/auth/decorator/get-auth-data.decorator';
 import { AdminGuard, UserGuard } from 'src/modules/auth/guard/auth.guard';
@@ -104,9 +104,9 @@ export class UserController {
       userId: authData.id,
     });
 
-    return new MessageRespModel(
-      "Your request has been sent. We'll contact you soon.",
-    );
+    return PlainToInstance(MessageRespDto, {
+      message: "Your request has been sent. We'll contact you soon.",
+    });
   }
 
   @HttpCode(HttpStatus.OK)
@@ -120,9 +120,9 @@ export class UserController {
   ) {
     await this.userService.approveEditorRegisterRequest(dto);
 
-    return new MessageRespModel(
-      'Approve Editor register request successfully.',
-    );
+    return PlainToInstance(MessageRespDto, {
+      message: 'Approve Editor register request successfully.',
+    });
   }
 
   // @HttpCode(HttpStatus.OK)

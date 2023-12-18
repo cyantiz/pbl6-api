@@ -195,7 +195,7 @@ export class ChoreService {
         { url: article.image_7_url, alt: article.image_7_alt },
         { url: article.image_8_url, alt: article.image_8_alt },
         { url: article.image_9_url, alt: article.image_9_alt },
-      ];
+      ].filter((it) => it.url);
 
       console.log('article author', article.author);
       console.log('article author slug', getSlug(article.author));
@@ -357,7 +357,7 @@ export class ChoreService {
         { url: article.image_7_url, alt: article.image_7_alt },
         { url: article.image_8_url, alt: article.image_8_alt },
         { url: article.image_9_url, alt: article.image_9_alt },
-      ];
+      ].filter((it) => it.url);
 
       let authorUserId = 1;
       try {

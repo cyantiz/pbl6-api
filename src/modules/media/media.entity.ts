@@ -15,6 +15,14 @@ export class EMedia {
   url: string;
 
   @Expose()
+  @ApiProperty({ type: String })
+  externalUrl: string;
+
+  @Expose()
+  @ApiProperty({ type: String })
+  alt: string;
+
+  @Expose()
   @ApiProperty({ type: Date })
   createdAt: Date;
 }

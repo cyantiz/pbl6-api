@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Prisma, user } from '@prisma/client';
 import * as argon from 'argon2';
 import { pick } from 'lodash';
-import { ErrorMessages, PlainToInstance, genRandomString } from 'src/helpers';
+import { ErrorMessages, genRandomString, PlainToInstance } from 'src/helpers';
 import { MailService } from 'src/modules/mail/mail.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { EUserMe } from './auth.entity';
@@ -42,6 +42,7 @@ export class AuthService {
           password: hashedPassword,
           name: dto.name,
           verifyToken: genRandomString(20),
+          avatarUrl: this.config.get('defaultAvatar'),
         },
       });
 

@@ -5,7 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  NotFoundException,
   Param,
   ParseIntPipe,
   Post,
@@ -23,9 +22,8 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { PostStatus, Role } from '@prisma/client';
+import { PostStatus } from '@prisma/client';
 import { MessageRespDto } from 'src/base/dto';
-import { PaginationQuery } from 'src/base/query';
 import { APISummaries, PlainToInstance } from 'src/helpers';
 import { FastifyFileInterceptor } from 'src/interceptor/file.interceptor';
 import {
@@ -33,14 +31,16 @@ import {
   GetAuthData,
 } from 'src/modules/auth/decorator/get-auth-data.decorator';
 import { EditorGuard, UserGuard } from 'src/modules/auth/guard/auth.guard';
-import { PostService } from './post.service';
 import {
   CreateChangeRequestDto,
   CreatePostDto,
+  GetMyPostsQuery,
   GetPopularPostsQuery,
   GetPostsQuery,
-} from './req.dto';
-import { ExtendedPostRespDto, GetPostsByFilterRespDto } from './res.dto';
+  GetPublishedPostsQuery,
+} from './dto/req.dto';
+import { ExtendedPostRespDto, GetPostsRespDto } from './dto/res.dto';
+import { PostService } from './post.service';
 
 @Controller('post')
 @ApiTags('POST')
@@ -48,20 +48,34 @@ export class PostController {
   constructor(private postService: PostService) {}
 
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: APISummaries.UNAUTH })
+  @ApiOperation({ summary: APISummaries.ADMIN })
   @ApiOkResponse({ type: ExtendedPostRespDto })
   @Get()
   async getPosts(
-    @Query(new ValidationPipe({ transform: true })) query: GetPostsQuery,
-    @GetAuthData() authData: AuthData,
-  ): Promise<GetPostsByFilterRespDto> {
-    const isAdmin = authData?.role === Role.ADMIN;
-
-    query.status = isAdmin ? query.status ?? undefined : PostStatus.PUBLISHED;
+    @Query(new ValidationPipe({ transform: true }))
+    query: GetPostsQuery,
+  ): Promise<GetPostsRespDto> {
     if (!Array.isArray(query.category)) query.category = [query.category];
 
     return this.postService.get({
       ...query,
+    });
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.UNAUTH })
+  @ApiOkResponse({ type: ExtendedPostRespDto })
+  @Get('/published')
+  async getPublishedPosts(
+    @Query(new ValidationPipe({ transform: true }))
+    query: GetPublishedPostsQuery,
+  ): Promise<GetPostsRespDto> {
+    if (!Array.isArray(query.category))
+      query.category = [query.category].filter(Boolean);
+
+    return this.postService.get({
+      ...query,
+      status: PostStatus.PUBLISHED,
     });
   }
 
@@ -73,11 +87,10 @@ export class PostController {
     @Param('id', ParseIntPipe) postId: number,
     @GetAuthData() authData: AuthData,
   ): Promise<ExtendedPostRespDto> {
-    const post = await this.postService.getById(postId);
-
-    if (authData?.role !== Role.ADMIN && post.status !== PostStatus.PUBLISHED) {
-      throw new NotFoundException('Post not found');
-    }
+    const post = this.postService.verifyPermissionToReadPost({
+      postId,
+      ...authData,
+    });
 
     return post;
   }
@@ -90,13 +103,24 @@ export class PostController {
     @Param('slug') slug: string,
     @GetAuthData() authData: AuthData,
   ): Promise<ExtendedPostRespDto> {
-    const post = await this.postService.getBySlug(slug);
-
-    if (authData?.role !== Role.ADMIN && post.status !== PostStatus.PUBLISHED) {
-      throw new NotFoundException('Post not found');
-    }
+    const post = this.postService.verifyPermissionToReadPost({
+      slug,
+      ...authData,
+    });
 
     return post;
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.UNAUTH })
+  @ApiOkResponse({ type: [ExtendedPostRespDto] })
+  @Get('search')
+  async getPostFromSearch(
+    @Query('searchText') searchText: string,
+  ): Promise<ExtendedPostRespDto[]> {
+    const posts = this.postService.getFromSearch(searchText);
+
+    return posts;
   }
 
   @HttpCode(HttpStatus.OK)
@@ -161,18 +185,21 @@ export class PostController {
 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: APISummaries.EDITOR })
-  @ApiOkResponse({ type: [GetPostsByFilterRespDto] })
+  @ApiOkResponse({ type: [GetPostsRespDto] })
   @ApiBearerAuth()
   @UseGuards(EditorGuard)
   @Get('/mine')
   async getMyPosts(
-    @Query() query: PaginationQuery,
+    @Query() query: GetMyPostsQuery,
     @GetAuthData() authData: AuthData,
-  ): Promise<GetPostsByFilterRespDto> {
-    return await this.postService.get({
+  ): Promise<ExtendedPostRespDto[]> {
+    const posts = await this.postService.get({
       userId: authData.id,
+      pageSize: 9999999,
       ...query,
     });
+
+    return posts.values;
   }
 
   @HttpCode(HttpStatus.OK)

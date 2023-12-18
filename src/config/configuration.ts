@@ -11,4 +11,10 @@ export default () => ({
   mongodb: {
     article: process.env.ARTICLE_MONGO_URL || '',
   },
+  search: {
+    host: process.env.SEARCH_HOST || '',
+    port: parseInt(process.env.SEARCH_PORT, 10) || 7999,
+  },
+  defaultAvatar:
+    'https://firebasestorage.googleapis.com/v0/b/pbl6-a7d3b.appspot.com/o/media%2Fdefault%2Fdefault.jpg?alt=media',
 });
