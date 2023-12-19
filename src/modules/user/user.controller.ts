@@ -29,11 +29,7 @@ import { FastifyFileInterceptor } from 'src/interceptor/file.interceptor';
 import { GetAuthData } from 'src/modules/auth/decorator/get-auth-data.decorator';
 import { AdminGuard, UserGuard } from 'src/modules/auth/guard/auth.guard';
 import { CreateMediaDto } from '../media/dto/req.dto';
-import {
-  BanUserDto,
-  CreateEditorRegisterRequestDto,
-  UpdateUserDto,
-} from './dto/user.dto';
+import { CreateEditorRegisterRequestDto, UpdateUserDto } from './dto/user.dto';
 import { UserModel } from './model/user.model';
 import { UserService } from './user.service';
 
@@ -106,32 +102,6 @@ export class UserController {
     return PlainToInstance(MessageRespDto, {
       message: "Your request has been sent. We'll contact you soon.",
     });
-  }
-
-  // @HttpCode(HttpStatus.OK)
-  // @ApiOperation({ summary: APISummaries.USER })
-  // @ApiOkResponse({ type: UserModel })
-  // @ApiBearerAuth()
-  // @UseGuards(UserGuard)
-  // @Delete(':username')
-  // deleteUser(
-  //   @Param('username') username: string,
-  //   @GetAuthData() authData: AuthData,
-  // ): Promise<string> {
-  //   return this.userService.deleteUser(username, {
-  //     role: user.role,
-  //     username: user.username,
-  //   });
-  // }
-
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: APISummaries.ADMIN })
-  @ApiOkResponse({ type: String })
-  @ApiBearerAuth()
-  @UseGuards(AdminGuard)
-  @Post('ban')
-  banUser(@Body() dto: BanUserDto): Promise<string> {
-    return this.userService.banUser(dto.username);
   }
 
   @HttpCode(HttpStatus.OK)

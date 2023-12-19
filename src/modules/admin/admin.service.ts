@@ -50,4 +50,17 @@ export class AdminService {
       },
     });
   }
+
+  async banUser(username: string): Promise<string> {
+    await this.prismaService.user.update({
+      where: {
+        username: username,
+      },
+      data: {
+        bannedAt: new Date(),
+      },
+    });
+
+    return 'User banned';
+  }
 }

@@ -63,6 +63,7 @@ export class MediaService {
     const firebaseBucket = this.configService.get<string>(
       'firebase.storageBucketName',
     );
+
     const url = `https://firebasestorage.googleapis.com/v0/b/${firebaseBucket}/o/media%2F${fileName}?alt=media`;
 
     return url;

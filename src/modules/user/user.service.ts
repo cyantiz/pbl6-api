@@ -161,19 +161,6 @@ export class UserService {
   //     );
   // }
 
-  async banUser(username: string): Promise<string> {
-    await this.prismaService.user.update({
-      where: {
-        username: username,
-      },
-      data: {
-        bannedAt: new Date(),
-      },
-    });
-
-    return 'User banned';
-  }
-
   async verifyUser(user: { email: string; username: string }): Promise<string> {
     const verifyToken = genRandomString(10);
 
