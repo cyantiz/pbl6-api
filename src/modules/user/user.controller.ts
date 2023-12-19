@@ -30,7 +30,6 @@ import { GetAuthData } from 'src/modules/auth/decorator/get-auth-data.decorator'
 import { AdminGuard, UserGuard } from 'src/modules/auth/guard/auth.guard';
 import { CreateMediaDto } from '../media/dto/req.dto';
 import {
-  ApproveEditorRegisterRequestDto,
   BanUserDto,
   CreateEditorRegisterRequestDto,
   UpdateUserDto,
@@ -106,22 +105,6 @@ export class UserController {
 
     return PlainToInstance(MessageRespDto, {
       message: "Your request has been sent. We'll contact you soon.",
-    });
-  }
-
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: APISummaries.ADMIN })
-  @ApiOkResponse({ type: MessageRespModel })
-  @ApiBearerAuth()
-  @UseGuards(AdminGuard)
-  @Post('/editor-register-request/approve')
-  async approveEditorRegisterRequest(
-    @Body() dto: ApproveEditorRegisterRequestDto,
-  ) {
-    await this.userService.approveEditorRegisterRequest(dto);
-
-    return PlainToInstance(MessageRespDto, {
-      message: 'Approve Editor register request successfully.',
     });
   }
 

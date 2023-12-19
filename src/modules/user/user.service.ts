@@ -246,44 +246,4 @@ export class UserService {
       },
     });
   }
-
-  async approveEditorRegisterRequest(params: { id: number }) {
-    const req = await this.prismaService.editor_reg_request.findFirst({
-      where: {
-        id: params.id,
-      },
-    });
-
-    if (!req)
-      throw new BadRequestException(
-        ErrorMessages.USER.EDITOR_REG_REQUEST_INVALID,
-      );
-
-    const existedUser = await this.prismaService.user.findFirst({
-      where: {
-        id: req.userId,
-      },
-    });
-
-    if (!existedUser)
-      throw new BadRequestException(ErrorMessages.USER.USER_INVALID);
-
-    await this.prismaService.user.update({
-      where: {
-        id: req.userId,
-      },
-      data: {
-        role: Role.EDITOR,
-      },
-    });
-
-    await this.prismaService.editor_reg_request.update({
-      where: {
-        id: params.id,
-      },
-      data: {
-        approvedAt: new Date(),
-      },
-    });
-  }
 }
