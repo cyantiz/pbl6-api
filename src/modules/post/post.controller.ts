@@ -39,7 +39,7 @@ import {
   GetPostsQuery,
   GetPublishedPostsQuery,
 } from './dto/req.dto';
-import { ExtendedPostRespDto, GetPostsRespDto } from './dto/res.dto';
+import { ExtendedPostRespDto, PaginatedGetPostsRespDto } from './dto/res.dto';
 import { PostService } from './post.service';
 
 @Controller('post')
@@ -54,7 +54,7 @@ export class PostController {
   async getPosts(
     @Query(new ValidationPipe({ transform: true }))
     query: GetPostsQuery,
-  ): Promise<GetPostsRespDto> {
+  ): Promise<PaginatedGetPostsRespDto> {
     if (!Array.isArray(query.category)) query.category = [query.category];
 
     return this.postService.get({
@@ -69,7 +69,7 @@ export class PostController {
   async getPublishedPosts(
     @Query(new ValidationPipe({ transform: true }))
     query: GetPublishedPostsQuery,
-  ): Promise<GetPostsRespDto> {
+  ): Promise<PaginatedGetPostsRespDto> {
     if (!Array.isArray(query.category))
       query.category = [query.category].filter(Boolean);
 
@@ -185,21 +185,20 @@ export class PostController {
 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: APISummaries.EDITOR })
-  @ApiOkResponse({ type: [GetPostsRespDto] })
+  @ApiOkResponse({ type: [PaginatedGetPostsRespDto] })
   @ApiBearerAuth()
   @UseGuards(EditorGuard)
   @Get('/mine')
   async getMyPosts(
     @Query() query: GetMyPostsQuery,
     @GetAuthData() authData: AuthData,
-  ): Promise<ExtendedPostRespDto[]> {
+  ): Promise<PaginatedGetPostsRespDto> {
     const posts = await this.postService.get({
       userId: authData.id,
-      pageSize: 9999999,
       ...query,
     });
 
-    return posts.values;
+    return posts;
   }
 
   @HttpCode(HttpStatus.OK)

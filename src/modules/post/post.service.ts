@@ -20,7 +20,7 @@ import { MediaService } from 'src/modules/media/media.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { getPaginationInfo, PaginationHandle } from './../../helpers/prisma';
 import { CreateChangeRequestDto, CreatePostDto } from './dto/req.dto';
-import { ExtendedPostRespDto, GetPostsRespDto } from './dto/res.dto';
+import { ExtendedPostRespDto, PaginatedGetPostsRespDto } from './dto/res.dto';
 
 @Injectable()
 export class PostService {
@@ -129,7 +129,7 @@ export class PostService {
       category?: string[];
       userId?: number;
     } & PaginationQuery,
-  ): Promise<GetPostsRespDto> {
+  ): Promise<PaginatedGetPostsRespDto> {
     const { status, category, page, pageSize, userId } = params;
 
     const dbQuery: Prisma.postFindManyArgs = {
@@ -172,7 +172,7 @@ export class PostService {
     ]);
 
     console.log(posts);
-    return PlainToInstance(GetPostsRespDto, {
+    return PlainToInstance(PaginatedGetPostsRespDto, {
       posts,
       ...getPaginationInfo({ count, page, pageSize }),
     });
@@ -389,6 +389,7 @@ export class PostService {
       data: {
         title: dto.title,
         body: dto.body,
+        secondaryText: dto.secondaryText,
         slug,
         thumbnailMedia: {
           connect: {

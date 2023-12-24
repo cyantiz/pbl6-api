@@ -39,7 +39,7 @@ export class ExtendedPostRespDto extends IntersectionType(EPost) {
   medias: EMedia[];
 }
 
-export class GetPostsRespDto extends PaginationRespDto {
+export class PaginatedGetPostsRespDto extends PaginationRespDto {
   @Expose()
   @ApiProperty({ type: [ExtendedPostRespDto] })
   @Transform(({ obj }) => PlainToInstanceList(ExtendedPostRespDto, obj?.posts))

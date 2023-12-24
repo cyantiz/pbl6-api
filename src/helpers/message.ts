@@ -21,4 +21,5 @@ export const ErrorMessages = {
   POST: {
     POST_NOT_FOUND: 'Post not found',
   },
+  ADMIN: {},
 };

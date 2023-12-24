@@ -38,6 +38,11 @@ export class CreatePostDto extends IntersectionType(UploadFileDto) {
   @ApiProperty({ type: String, required: true })
   title: string;
 
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ type: String, required: false })
+  secondaryText?: string;
+
   @IsNotEmpty()
   @IsString()
   @ApiProperty({ type: String, required: true })
