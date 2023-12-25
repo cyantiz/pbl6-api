@@ -7,9 +7,19 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
+  Min,
 } from 'class-validator';
 import { UploadFileDto } from 'src/base/dto';
 import { PaginationQuery } from 'src/base/query';
+
+export class PostIdRequiredDto {
+  @IsNotEmpty()
+  @Type(() => Number)
+  @IsNumber()
+  @ApiProperty({ type: Number, required: true })
+  id: number;
+}
 
 export class GetPostsQuery extends PaginationQuery {
   @IsString()
@@ -119,4 +129,14 @@ export class GetMyPostsQuery extends PaginationQuery {
     required: false,
   })
   status? = PostStatus.PUBLISHED;
+}
+
+export class SaveReadingProgressDto {
+  @IsNumber()
+  @IsNotEmpty()
+  @Type(() => Number)
+  @Max(100)
+  @Min(0)
+  @ApiProperty({ type: Number, required: true })
+  progress: number;
 }

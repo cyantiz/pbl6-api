@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Role } from '@prisma/client';
-import { PaginationQuery } from 'src/base/query';
+import { PostStatus, Prisma, Role } from '@prisma/client';
 import {
   ErrorMessages,
   genRandomString,
+  getPaginationInfo,
   PaginationHandle,
   PlainToInstance,
   PlainToInstanceList,
@@ -13,8 +13,13 @@ import {
 import { MailService } from 'src/modules/mail/mail.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { MediaService } from '../media/media.service';
+import { GetAllUsersQueryDto } from './dto/req.dto';
+import {
+  GetMyVotedPostIdsRespDto,
+  PaginatedGetUsersRespDto,
+} from './dto/res.dto';
 import { UpdateUserDto } from './dto/user.dto';
-import { UserModel } from './model/user.model';
+import { EUserModel, LimitedUserModel } from './model/user.model';
 
 @Injectable()
 export class UserService {
@@ -40,13 +45,47 @@ export class UserService {
     return user.isVerified;
   }
 
-  async getAllUsers(query: PaginationQuery): Promise<UserModel[]> {
-    const dbQuery = {};
+  async getTopContributors(limit: number): Promise<LimitedUserModel[]> {
+    const users = await this.prismaService.user.findMany({
+      where: {
+        role: Role.EDITOR,
+      },
+      include: {
+        posts: {
+          where: {
+            status: PostStatus.PUBLISHED,
+          },
+        },
+      },
+      orderBy: {
+        posts: {
+          _count: 'desc',
+        },
+      },
+      take: limit,
+    });
 
-    PaginationHandle(dbQuery, query.page, query.pageSize);
-    const users = await this.prismaService.user.findMany(dbQuery);
+    return PlainToInstanceList(LimitedUserModel, users);
+  }
 
-    return PlainToInstanceList(UserModel, users);
+  async getMyVotedPostIds(userId: number): Promise<GetMyVotedPostIdsRespDto> {
+    const user = await this.prismaService.user.findFirst({
+      where: {
+        id: userId,
+      },
+      include: {
+        postVotes: true,
+      },
+    });
+
+    const upvotedPostIds = user.postVotes
+      .filter((vote) => vote.positive)
+      .map((vote) => vote.postId);
+    const downvotedPostIds = user.postVotes
+      .filter((vote) => !vote.positive)
+      .map((vote) => vote.postId);
+
+    return { upvotedPostIds, downvotedPostIds };
   }
 
   async GetAuthDataByUsername(
@@ -55,8 +94,8 @@ export class UserService {
       role: string;
       username: string;
     },
-  ): Promise<UserModel> {
-    let result: UserModel;
+  ): Promise<EUserModel> {
+    let result: EUserModel;
     if (
       (user.role === Role.USER && username === user.username) ||
       (user.role === Role.EDITOR && username === user.username) ||
@@ -70,7 +109,7 @@ export class UserService {
         },
       });
 
-      result = PlainToInstance(UserModel, user);
+      result = PlainToInstance(EUserModel, user);
     } else {
       const user = await this.prismaService.user.findFirst({
         where: {
@@ -85,7 +124,7 @@ export class UserService {
         });
       }
 
-      result = PlainToInstance(UserModel, user);
+      result = PlainToInstance(EUserModel, user);
     }
 
     if (!result) throw new BadRequestException(ErrorMessages.USER.USER_INVALID);
@@ -100,7 +139,7 @@ export class UserService {
       role: string;
       username: string;
     },
-  ): Promise<UserModel> {
+  ): Promise<EUserModel> {
     const condition = {
       bannedAt: null,
     };
@@ -123,7 +162,7 @@ export class UserService {
       where: condition,
     });
 
-    return PlainToInstance(UserModel, updatedUser);
+    return PlainToInstance(EUserModel, updatedUser);
   }
 
   // async deleteUser(
@@ -230,6 +269,112 @@ export class UserService {
       data: {
         message,
         userId,
+      },
+    });
+  }
+
+  async getAllUsers(
+    query: GetAllUsersQueryDto,
+  ): Promise<PaginatedGetUsersRespDto> {
+    const { page, pageSize } = query;
+
+    const dbQuery: Prisma.userFindManyArgs = {
+      where: {
+        role: Role.USER,
+        name: query?.partialName
+          ? {
+              contains: query.partialName,
+            }
+          : undefined,
+      },
+    };
+
+    PaginationHandle(dbQuery, page, pageSize);
+
+    const [count, users] = await this.prismaService.$transaction([
+      this.prismaService.user.count({
+        where: dbQuery.where,
+      }),
+      this.prismaService.user.findMany(dbQuery),
+    ]);
+
+    return PlainToInstance(PaginatedGetUsersRespDto, {
+      users,
+      ...getPaginationInfo({ count, page, pageSize }),
+    });
+  }
+
+  async getAllEditors(
+    query: GetAllUsersQueryDto,
+  ): Promise<PaginatedGetUsersRespDto> {
+    const { page, pageSize } = query;
+
+    const dbQuery: Prisma.userFindManyArgs = {
+      where: {
+        role: Role.EDITOR,
+        name: query?.partialName
+          ? {
+              contains: query.partialName,
+            }
+          : undefined,
+      },
+    };
+
+    PaginationHandle(dbQuery, page, pageSize);
+
+    const [count, users] = await this.prismaService.$transaction([
+      this.prismaService.user.count({
+        where: dbQuery.where,
+      }),
+      this.prismaService.user.findMany(dbQuery),
+    ]);
+
+    return PlainToInstance(PaginatedGetUsersRespDto, {
+      users,
+      ...getPaginationInfo({ count, page, pageSize }),
+    });
+  }
+
+  async banUser(username: string) {
+    await this.prismaService.user.update({
+      where: {
+        username: username,
+      },
+      data: {
+        bannedAt: new Date(),
+      },
+    });
+  }
+
+  async unbanUser(username: string) {
+    await this.prismaService.user.update({
+      where: {
+        username: username,
+      },
+      data: {
+        bannedAt: null,
+      },
+    });
+  }
+
+  async promoteEditor(username: string) {
+    await this.prismaService.user.update({
+      where: {
+        username: username,
+      },
+      data: {
+        role: Role.EDITOR,
+      },
+    });
+  }
+
+  async removeEditorRights(username: string) {
+    await this.prismaService.user.update({
+      where: {
+        username: username,
+      },
+      data: {
+        role: Role.USER,
       },
     });
   }

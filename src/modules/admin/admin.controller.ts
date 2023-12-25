@@ -15,10 +15,7 @@ import {
 import { MessageRespDto } from 'src/base/dto';
 import { MessageRespModel } from 'src/base/mode';
 import { APISummaries, PlainToInstance } from 'src/helpers';
-import {
-  ApproveEditorRegisterRequestDto,
-  BanUserDto,
-} from '../admin/dto/req.dto';
+import { ApproveEditorRegisterRequestDto } from '../admin/dto/req.dto';
 import { AdminGuard } from '../auth/guard/auth.guard';
 import { AdminService } from './admin.service';
 
@@ -32,7 +29,7 @@ export class AdminController {
   @ApiOkResponse({ type: MessageRespModel })
   @ApiBearerAuth()
   @UseGuards(AdminGuard)
-  @Post('/user-mgt/register-request/approve')
+  @Post('/account-mgt/editors/request/approve')
   async approveEditorRegisterRequest(
     @Body() dto: ApproveEditorRegisterRequestDto,
   ) {
@@ -41,16 +38,6 @@ export class AdminController {
     return PlainToInstance(MessageRespDto, {
       message: 'Approve editor register request successfully.',
     });
-  }
-
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: APISummaries.ADMIN })
-  @ApiOkResponse({ type: String })
-  @ApiBearerAuth()
-  @UseGuards(AdminGuard)
-  @Post('/user-mgt/ban')
-  banUser(@Body() dto: BanUserDto): Promise<string> {
-    return this.adminService.banUser(dto.username);
   }
 
   // @HttpCode(HttpStatus.OK)

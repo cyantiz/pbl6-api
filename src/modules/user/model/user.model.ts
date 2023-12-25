@@ -2,7 +2,25 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { Expose } from 'class-transformer';
 
-export class UserModel {
+export class LimitedUserModel {
+  @Expose()
+  @ApiProperty({ type: Number })
+  id: number;
+
+  @Expose()
+  @ApiProperty({ type: String })
+  username: string;
+
+  @Expose()
+  @ApiProperty({ type: String })
+  avatarUrl: string;
+
+  @Expose()
+  @ApiProperty({ type: String })
+  name: string;
+}
+
+export class EUserModel {
   @Expose()
   @ApiProperty({ type: Number })
   id: number;

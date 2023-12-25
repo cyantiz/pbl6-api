@@ -15,7 +15,12 @@ import {
 } from '@prisma/client';
 import { pick } from 'lodash';
 import { PaginationQuery } from 'src/base/query';
-import { getSlug, PlainToInstance, PlainToInstanceList } from 'src/helpers';
+import {
+  ErrorMessages,
+  getSlug,
+  PlainToInstance,
+  PlainToInstanceList,
+} from 'src/helpers';
 import { MediaService } from 'src/modules/media/media.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { getPaginationInfo, PaginationHandle } from './../../helpers/prisma';
@@ -171,7 +176,6 @@ export class PostService {
       this.prismaService.post.findMany(dbQuery),
     ]);
 
-    console.log(posts);
     return PlainToInstance(PaginatedGetPostsRespDto, {
       posts,
       ...getPaginationInfo({ count, page, pageSize }),
@@ -501,5 +505,254 @@ export class PostService {
 
         break;
     }
+  }
+
+  async upvotePost(postId: number, userId: number) {
+    const existed = await this.prismaService.post_vote.findFirst({
+      where: {
+        postId,
+        userId,
+      },
+    });
+
+    if (existed) {
+      if (existed.positive)
+        await this.prismaService.$transaction([
+          this.prismaService.post_vote.delete({
+            where: {
+              id: existed.id,
+            },
+          }),
+          this.prismaService.post.update({
+            where: {
+              id: postId,
+            },
+            data: {
+              upvote: {
+                decrement: 1,
+              },
+            },
+          }),
+        ]);
+      else
+        await this.prismaService.$transaction([
+          this.prismaService.post_vote.update({
+            where: {
+              id: existed.id,
+            },
+            data: {
+              positive: true,
+            },
+          }),
+          this.prismaService.post.update({
+            where: {
+              id: postId,
+            },
+            data: {
+              upvote: {
+                increment: 1,
+              },
+              downvote: {
+                decrement: 1,
+              },
+            },
+          }),
+        ]);
+
+      return;
+    }
+
+    await this.prismaService.$transaction([
+      this.prismaService.post_vote.create({
+        data: {
+          positive: true,
+          post: {
+            connect: {
+              id: postId,
+            },
+          },
+          user: {
+            connect: {
+              id: userId,
+            },
+          },
+        },
+      }),
+      this.prismaService.post.update({
+        where: {
+          id: postId,
+        },
+        data: {
+          upvote: {
+            increment: 1,
+          },
+        },
+      }),
+    ]);
+  }
+
+  async downvotePost(postId: number, userId: number) {
+    const existed = await this.prismaService.post_vote.findFirst({
+      where: {
+        postId,
+        userId,
+      },
+    });
+
+    if (existed) {
+      if (!existed.positive)
+        await this.prismaService.$transaction([
+          this.prismaService.post_vote.delete({
+            where: {
+              id: existed.id,
+            },
+          }),
+          this.prismaService.post.update({
+            where: {
+              id: postId,
+            },
+            data: {
+              downvote: {
+                decrement: 1,
+              },
+            },
+          }),
+        ]);
+      else
+        await this.prismaService.$transaction([
+          this.prismaService.post_vote.update({
+            where: {
+              id: existed.id,
+            },
+            data: {
+              positive: false,
+            },
+          }),
+          this.prismaService.post.update({
+            where: {
+              id: postId,
+            },
+            data: {
+              upvote: {
+                decrement: 1,
+              },
+              downvote: {
+                increment: 1,
+              },
+            },
+          }),
+        ]);
+
+      return;
+    }
+
+    await this.prismaService.$transaction([
+      this.prismaService.post_vote.create({
+        data: {
+          positive: false,
+          post: {
+            connect: {
+              id: postId,
+            },
+          },
+          user: {
+            connect: {
+              id: userId,
+            },
+          },
+        },
+      }),
+      this.prismaService.post.update({
+        where: {
+          id: postId,
+        },
+        data: {
+          downvote: {
+            increment: 1,
+          },
+        },
+      }),
+    ]);
+  }
+
+  async commentToPost(params: {
+    postId: number;
+    userId: number;
+    comment: string;
+  }) {
+    const { postId, userId, comment } = params;
+
+    const post = await this.prismaService.post.findFirst({
+      where: {
+        id: postId,
+      },
+    });
+
+    if (!post) throw new NotFoundException(ErrorMessages.POST.POST_NOT_FOUND);
+
+    return await this.prismaService.comment.create({
+      data: {
+        text: comment,
+        post: {
+          connect: {
+            id: postId,
+          },
+        },
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
+      },
+      include: {
+        parentComment: true,
+        childComments: true,
+      },
+    });
+  }
+
+  async saveReadingProgress(params: {
+    userId: number;
+    postId: number;
+    progress: number;
+  }) {
+    const { userId, postId, progress } = params;
+
+    const existed = await this.prismaService.user_read_post.findFirst({
+      where: {
+        userId,
+        postId,
+      },
+    });
+
+    if (!existed) {
+      return await this.prismaService.user_read_post.create({
+        data: {
+          progress,
+          post: {
+            connect: {
+              id: postId,
+            },
+          },
+          user: {
+            connect: {
+              id: userId,
+            },
+          },
+        },
+      });
+    }
+
+    return await this.prismaService.user_read_post.update({
+      where: {
+        userId_postId: {
+          userId,
+          postId,
+        },
+      },
+      data: {
+        progress,
+      },
+    });
   }
 }

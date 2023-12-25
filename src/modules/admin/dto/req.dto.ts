@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber } from 'class-validator';
 
 export class ApproveEditorRegisterRequestDto {
   @IsNotEmpty()
@@ -8,10 +8,4 @@ export class ApproveEditorRegisterRequestDto {
   @IsNumber()
   @ApiProperty({ type: Number })
   id: number;
-}
-
-export class BanUserDto {
-  @IsString()
-  @ApiProperty({ type: String, required: true, nullable: false })
-  username: string;
 }

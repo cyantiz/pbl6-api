@@ -85,3 +85,11 @@ export class ResetPasswordDto {
   })
   password: string;
 }
+
+export class CommentToPostDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255, { message: 'Comment too long' })
+  @ApiProperty({ type: String, required: true, nullable: false })
+  comment: string;
+}

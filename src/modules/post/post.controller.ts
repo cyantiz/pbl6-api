@@ -31,6 +31,7 @@ import {
   GetAuthData,
 } from 'src/modules/auth/decorator/get-auth-data.decorator';
 import { EditorGuard, UserGuard } from 'src/modules/auth/guard/auth.guard';
+import { CommentToPostDto } from '../auth/dto/req.dto';
 import {
   CreateChangeRequestDto,
   CreatePostDto,
@@ -38,8 +39,10 @@ import {
   GetPopularPostsQuery,
   GetPostsQuery,
   GetPublishedPostsQuery,
+  SaveReadingProgressDto,
 } from './dto/req.dto';
 import { ExtendedPostRespDto, PaginatedGetPostsRespDto } from './dto/res.dto';
+import { EComment } from './post.entity';
 import { PostService } from './post.service';
 
 @Controller('post')
@@ -223,5 +226,91 @@ export class PostController {
     const post = await this.postService.getFrontPagePost();
 
     return post;
+  }
+
+  @Post('/:id/upvote')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.USER })
+  @ApiOkResponse({ type: MessageRespDto })
+  @ApiBearerAuth()
+  @UseGuards(UserGuard)
+  async upvotePost(
+    @GetAuthData() authData: AuthData,
+    @Param('id', ParseIntPipe) postId: number,
+  ): Promise<MessageRespDto> {
+    const userId = authData.id;
+
+    await this.postService.upvotePost(postId, userId);
+
+    return PlainToInstance(MessageRespDto, {
+      message: 'Toggle upvote successfully',
+    });
+  }
+
+  @Post('/:id/downvote')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.USER })
+  @ApiOkResponse({ type: MessageRespDto })
+  @ApiBearerAuth()
+  @UseGuards(UserGuard)
+  async downvotePost(
+    @Param('id', ParseIntPipe) postId: number,
+    @GetAuthData() authData: AuthData,
+  ): Promise<MessageRespDto> {
+    const userId = authData.id;
+
+    await this.postService.downvotePost(postId, userId);
+
+    return PlainToInstance(MessageRespDto, {
+      message: 'Toggle downvote successfully',
+    });
+  }
+
+  @Post('/:id/comment')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.USER })
+  @ApiOkResponse({ type: EComment })
+  @ApiBearerAuth()
+  @UseGuards(UserGuard)
+  async commentToPost(
+    @Param('id', ParseIntPipe) postId: number,
+    @Body() dto: CommentToPostDto,
+    @GetAuthData() authData: AuthData,
+  ): Promise<EComment> {
+    const userId = authData.id;
+    const { comment } = dto;
+
+    const newComment = await this.postService.commentToPost({
+      postId,
+      userId,
+      comment,
+    });
+
+    return PlainToInstance(EComment, newComment);
+  }
+
+  @Post('/:id/save-reading-progress')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.USER })
+  @ApiOkResponse({ type: MessageRespDto })
+  @ApiBearerAuth()
+  @UseGuards(UserGuard)
+  async saveReadingProgress(
+    @Param('id', ParseIntPipe) postId: number,
+    @Body() dto: SaveReadingProgressDto,
+    @GetAuthData() authData: AuthData,
+  ): Promise<MessageRespDto> {
+    const userId = authData.id;
+    const { progress } = dto;
+
+    await this.postService.saveReadingProgress({
+      postId,
+      userId,
+      progress,
+    });
+
+    return PlainToInstance(MessageRespDto, {
+      message: 'Saved reading progress successfully',
+    });
   }
 }

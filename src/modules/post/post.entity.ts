@@ -78,3 +78,41 @@ export class EPostAuthor {
   @ApiProperty({ type: String })
   avatarUrl: string;
 }
+
+export class EComment {
+  @Expose()
+  @ApiProperty({ type: Number })
+  id: number;
+
+  @Expose()
+  @ApiProperty({ type: String })
+  text: string;
+
+  @Expose()
+  @ApiProperty({ type: Number })
+  postId?: number;
+
+  @Expose()
+  @ApiProperty({ type: Number })
+  parentCommentId?: number;
+
+  @Expose()
+  @ApiProperty({ type: Number })
+  upvote: number;
+
+  @Expose()
+  @ApiProperty({ type: Number })
+  downvote?: number;
+
+  @Expose()
+  @ApiProperty({ type: Date })
+  createdAt: Date;
+
+  @Expose()
+  @ApiProperty({ type: EComment, required: false })
+  parentComment?: EComment;
+
+  @Expose()
+  @ApiProperty({ type: EComment, required: false })
+  childComments?: EComment[];
+}

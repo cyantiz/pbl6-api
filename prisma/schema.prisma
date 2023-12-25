@@ -32,6 +32,7 @@ model user {
   commentVotes       comment_vote[]
   change_request     change_request[]
   editor_reg_request editor_reg_request[]
+  readPost           user_read_post[]
 }
 
 model post {
@@ -63,6 +64,7 @@ model post {
   report           report[]
   post_media       post_media[]
   post_subcategory post_subcategory[]
+  readUser         user_read_post[]
 }
 
 model category {
@@ -205,6 +207,16 @@ model post_subcategory {
   createdAt     DateTime    @default(now())
 
   @@id([postId, subcategoryId])
+}
+
+model user_read_post {
+  userId   Int
+  postId   Int
+  progress Int  @default(0)
+  user     user @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post     post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
 }
 
 model temp_article_from_mongo {
