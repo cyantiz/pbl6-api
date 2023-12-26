@@ -140,3 +140,7 @@ export class SaveReadingProgressDto {
   @ApiProperty({ type: Number, required: true })
   progress: number;
 }
+
+export class GetPostCommentsQueryDto extends IntersectionType(
+  PaginationQuery,
+) {}

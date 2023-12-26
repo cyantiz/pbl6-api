@@ -4,7 +4,7 @@ import { PaginationRespDto } from 'src/base/dto';
 import { PlainToInstance, PlainToInstanceList } from 'src/helpers';
 import { EMedia } from 'src/modules/media/media.entity';
 import { ECategory } from '../../category/category.entity';
-import { EPost, EPostAuthor } from '../post.entity';
+import { EComment, EPost, EPostAuthor } from '../post.entity';
 
 export class ExtendedPostRespDto extends IntersectionType(EPost) {
   @Expose()
@@ -44,4 +44,11 @@ export class PaginatedGetPostsRespDto extends PaginationRespDto {
   @ApiProperty({ type: [ExtendedPostRespDto] })
   @Transform(({ obj }) => PlainToInstanceList(ExtendedPostRespDto, obj?.posts))
   values: ExtendedPostRespDto[];
+}
+
+export class PaginatedGetCommentsRespDto extends PaginationRespDto {
+  @Expose()
+  @ApiProperty({ type: [EComment] })
+  @Transform(({ obj }) => PlainToInstanceList(EComment, obj?.comments))
+  values: EComment[];
 }

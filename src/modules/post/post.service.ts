@@ -25,7 +25,11 @@ import { MediaService } from 'src/modules/media/media.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { getPaginationInfo, PaginationHandle } from './../../helpers/prisma';
 import { CreateChangeRequestDto, CreatePostDto } from './dto/req.dto';
-import { ExtendedPostRespDto, PaginatedGetPostsRespDto } from './dto/res.dto';
+import {
+  ExtendedPostRespDto,
+  PaginatedGetCommentsRespDto,
+  PaginatedGetPostsRespDto,
+} from './dto/res.dto';
 
 @Injectable()
 export class PostService {
@@ -753,6 +757,42 @@ export class PostService {
       data: {
         progress,
       },
+    });
+  }
+
+  async getPostComments(params: {
+    postId: number;
+    page: number;
+    pageSize: number;
+  }) {
+    const { postId, page, pageSize } = params;
+
+    const dbQuery: Prisma.commentFindManyArgs = {
+      where: {
+        postId,
+      },
+      include: {
+        parentComment: true,
+        childComments: true,
+        user: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    };
+
+    PaginationHandle(dbQuery, page, pageSize);
+
+    const [count, comments] = await this.prismaService.$transaction([
+      this.prismaService.comment.count({
+        where: dbQuery.where,
+      }),
+      this.prismaService.comment.findMany(dbQuery),
+    ]);
+
+    return PlainToInstance(PaginatedGetCommentsRespDto, {
+      comments,
+      ...getPaginationInfo({ count, page, pageSize }),
     });
   }
 }

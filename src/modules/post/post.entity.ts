@@ -1,5 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, IntersectionType } from '@nestjs/swagger';
 import { Expose, Transform } from 'class-transformer';
+import { PlainToInstance } from 'src/helpers';
 
 export class EPost {
   @Expose()
@@ -79,6 +80,8 @@ export class EPostAuthor {
   avatarUrl: string;
 }
 
+export class ECommentAuthor extends IntersectionType(EPostAuthor) {}
+
 export class EComment {
   @Expose()
   @ApiProperty({ type: Number })
@@ -107,6 +110,11 @@ export class EComment {
   @Expose()
   @ApiProperty({ type: Date })
   createdAt: Date;
+
+  @Expose()
+  @ApiProperty({ type: ECommentAuthor })
+  @Transform(({ obj }) => PlainToInstance(ECommentAuthor, obj?.user))
+  author: ECommentAuthor;
 
   @Expose()
   @ApiProperty({ type: EComment, required: false })

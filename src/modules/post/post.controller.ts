@@ -37,11 +37,16 @@ import {
   CreatePostDto,
   GetMyPostsQuery,
   GetPopularPostsQuery,
+  GetPostCommentsQueryDto,
   GetPostsQuery,
   GetPublishedPostsQuery,
   SaveReadingProgressDto,
 } from './dto/req.dto';
-import { ExtendedPostRespDto, PaginatedGetPostsRespDto } from './dto/res.dto';
+import {
+  ExtendedPostRespDto,
+  PaginatedGetCommentsRespDto,
+  PaginatedGetPostsRespDto,
+} from './dto/res.dto';
 import { EComment } from './post.entity';
 import { PostService } from './post.service';
 
@@ -266,7 +271,7 @@ export class PostController {
     });
   }
 
-  @Post('/:id/comment')
+  @Post('/:id/comments')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: APISummaries.USER })
   @ApiOkResponse({ type: EComment })
@@ -287,6 +292,22 @@ export class PostController {
     });
 
     return PlainToInstance(EComment, newComment);
+  }
+
+  @Get('/:id/comments')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.UNAUTH })
+  @ApiOkResponse({ type: [EComment] })
+  async getPostComments(
+    @Query() query: GetPostCommentsQueryDto,
+    @Param('id', ParseIntPipe) postId: number,
+  ): Promise<PaginatedGetCommentsRespDto> {
+    const result = await this.postService.getPostComments({
+      postId,
+      ...query,
+    });
+
+    return result;
   }
 
   @Post('/:id/save-reading-progress')
