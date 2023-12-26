@@ -243,12 +243,23 @@ export class PostService {
     console.log(
       `${this.searchHost}:${this.searchPort}/text-search?query=${text}&limit=${limit}`,
     );
-    const slugs = data.map((item) => getSlug(item.title));
+    // const slugs = data?.response?.map((item) => getSlug(item.title));
+
+    if (
+      data?.response ===
+      'your query does not seem to be related to sports content.'
+    ) {
+      throw new BadRequestException(
+        'Your query does not seem to be related to sports content.',
+      );
+    }
+
+    const oids = data?.response?.map((item) => item?.length) ?? [];
 
     const posts = await this.prismaService.post.findMany({
       where: {
-        slug: {
-          in: slugs,
+        mongoOid: {
+          in: oids,
         },
       },
       include: {
