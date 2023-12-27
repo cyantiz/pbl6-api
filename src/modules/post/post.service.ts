@@ -7,23 +7,23 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-  category,
   PostStatus,
   Prisma,
   Role,
+  category,
   subcategory,
 } from '@prisma/client';
 import { pick } from 'lodash';
 import { PaginationQuery } from 'src/base/query';
 import {
   ErrorMessages,
-  getSlug,
   PlainToInstance,
   PlainToInstanceList,
+  getSlug,
 } from 'src/helpers';
 import { MediaService } from 'src/modules/media/media.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
-import { getPaginationInfo, PaginationHandle } from './../../helpers/prisma';
+import { PaginationHandle, getPaginationInfo } from './../../helpers/prisma';
 import { CreateChangeRequestDto, CreatePostDto } from './dto/req.dto';
 import {
   ExtendedPostRespDto,
@@ -254,7 +254,7 @@ export class PostService {
       );
     }
 
-    const oids = data?.response?.map((item) => item?.length) ?? [];
+    const oids = data?.response ?? [];
 
     const posts = await this.prismaService.post.findMany({
       where: {
