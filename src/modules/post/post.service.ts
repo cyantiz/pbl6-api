@@ -237,7 +237,7 @@ export class PostService {
     limit = 10,
   ): Promise<ExtendedPostRespDto[]> {
     const { data } = await this.httpService.axiosRef.get(
-      `${this.searchHost}:${this.searchPort}/text-search?query=${text}&limit=${limit}`,
+      `https://search.sportivefy.info/text-search?query=${text}&limit=${limit}`,
     );
 
     console.log(
@@ -275,7 +275,11 @@ export class PostService {
       },
     });
 
-    return PlainToInstanceList(ExtendedPostRespDto, posts);
+    const sortedPosts = oids.map((oid) =>
+      posts.find((post) => post.mongoOid === oid),
+    );
+
+    return PlainToInstanceList(ExtendedPostRespDto, sortedPosts);
   }
 
   /**
