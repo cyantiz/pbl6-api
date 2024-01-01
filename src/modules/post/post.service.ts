@@ -7,23 +7,23 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  category,
   PostStatus,
   Prisma,
   Role,
-  category,
   subcategory,
 } from '@prisma/client';
 import { pick } from 'lodash';
 import { PaginationQuery } from 'src/base/query';
 import {
   ErrorMessages,
+  getSlug,
   PlainToInstance,
   PlainToInstanceList,
-  getSlug,
 } from 'src/helpers';
 import { MediaService } from 'src/modules/media/media.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
-import { PaginationHandle, getPaginationInfo } from './../../helpers/prisma';
+import { getPaginationInfo, PaginationHandle } from './../../helpers/prisma';
 import { CreateChangeRequestDto, CreatePostDto } from './dto/req.dto';
 import {
   ExtendedPostRespDto,
@@ -249,9 +249,7 @@ export class PostService {
       data?.response ===
       'your query does not seem to be related to sports content.'
     ) {
-      throw new BadRequestException(
-        'Your query does not seem to be related to sports content.',
-      );
+      throw new BadRequestException('NOT_SPORT_RELEVANT');
     }
 
     const oids = data?.response ?? [];
@@ -275,9 +273,11 @@ export class PostService {
       },
     });
 
-    const sortedPosts = oids.map((oid) =>
-      posts.find((post) => post.mongoOid === oid),
-    );
+    const sortedPosts = oids.map((oid) => {
+      const foundPost = posts.find((post) => post.mongoOid === oid);
+      if (!foundPost) console.log('NOT FOUND', oid);
+      return foundPost;
+    });
 
     return PlainToInstanceList(ExtendedPostRespDto, sortedPosts);
   }
