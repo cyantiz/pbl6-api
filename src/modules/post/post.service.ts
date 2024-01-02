@@ -30,6 +30,8 @@ import {
   PaginatedGetCommentsRespDto,
   PaginatedGetPostsRespDto,
 } from './dto/res.dto';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+import * as FormData from 'form-data';
 
 @Injectable()
 export class PostService {
@@ -40,8 +42,8 @@ export class PostService {
     private readonly configService: ConfigService,
   ) {}
 
-  private searchHost = this.configService.get<string>('search.host');
-  private searchPort = this.configService.get<number>('search.port');
+  private searchTextUrl = this.configService.get<string>('search.byTextUrl');
+  private searchImageUrl = this.configService.get<string>('search.byImageUrl');
 
   private async findCategoryById(categoryId: number): Promise<category> {
     return await this.prismaService.category.findFirst({
@@ -232,17 +234,11 @@ export class PostService {
     return PlainToInstance(ExtendedPostRespDto, post);
   }
 
-  async getFromSearch(
-    text: string,
-    limit = 10,
-  ): Promise<ExtendedPostRespDto[]> {
+  async getFromSearchText(text: string): Promise<ExtendedPostRespDto[]> {
     const { data } = await this.httpService.axiosRef.get(
-      `https://search.sportivefy.info/text-search?query=${text}&limit=${limit}`,
+      `${this.searchTextUrl}?query=${text}`,
     );
 
-    console.log(
-      `${this.searchHost}:${this.searchPort}/text-search?query=${text}&limit=${limit}`,
-    );
     // const slugs = data?.response?.map((item) => getSlug(item.title));
 
     if (
@@ -253,6 +249,71 @@ export class PostService {
     }
 
     const oids = data?.response ?? [];
+
+    const posts = await this.prismaService.post.findMany({
+      where: {
+        mongoOid: {
+          in: oids,
+        },
+      },
+      include: {
+        author: true,
+        category: true,
+        visits: true,
+        thumbnailMedia: true,
+        post_media: {
+          include: {
+            media: true,
+          },
+        },
+      },
+    });
+
+    const sortedPosts = oids.map((oid) => {
+      const foundPost = posts.find((post) => post.mongoOid === oid);
+      if (!foundPost) console.log('NOT FOUND', oid);
+      return foundPost;
+    });
+
+    return PlainToInstanceList(ExtendedPostRespDto, sortedPosts);
+  }
+
+  async getFromSearchImage(
+    file: Express.Multer.File,
+  ): Promise<ExtendedPostRespDto[]> {
+    console.log('filename', file.originalname);
+    const formData = new FormData();
+
+    console.log('filename', file.originalname);
+    formData.append('file', Buffer.from(file.buffer), {
+      filename: file.originalname,
+      contentType: file.mimetype,
+    });
+
+    console.log('filename', file.originalname);
+    const { data } = await this.httpService.axiosRef.post(
+      `${this.searchImageUrl}`,
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          'Content-Length': `${formData.getLengthSync()}`,
+        },
+      },
+    );
+
+    // const slugs = data?.response?.map((item) => getSlug(item.title));
+
+    if (
+      data?.response ===
+      'your query does not seem to be related to sports content.'
+    ) {
+      throw new BadRequestException('NOT_SPORT_RELEVANT');
+    }
+
+    const oids = data?.response ?? [];
+
+    console.log('oids');
 
     const posts = await this.prismaService.post.findMany({
       where: {

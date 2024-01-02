@@ -23,7 +23,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { PostStatus } from '@prisma/client';
-import { MessageRespDto } from 'src/base/dto';
+import { MessageRespDto, UploadFileDto } from 'src/base/dto';
 import { APISummaries, PlainToInstance } from 'src/helpers';
 import { FastifyFileInterceptor } from 'src/interceptor/file.interceptor';
 import {
@@ -122,11 +122,27 @@ export class PostController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: APISummaries.UNAUTH })
   @ApiOkResponse({ type: [ExtendedPostRespDto] })
-  @Get('search')
-  async getPostFromSearch(
+  @Get('search-text')
+  async getPostFromSearchText(
     @Query('searchText') searchText: string,
   ): Promise<ExtendedPostRespDto[]> {
-    const posts = this.postService.getFromSearch(searchText);
+    const posts = this.postService.getFromSearchText(searchText);
+
+    return posts;
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.UNAUTH })
+  @ApiOkResponse({ type: [ExtendedPostRespDto] })
+  @Post('search-image')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FastifyFileInterceptor('filename'))
+  async getPostFromSearchImage(
+    @UploadedFile() file: Express.Multer.File,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @Body() dto: UploadFileDto,
+  ): Promise<ExtendedPostRespDto[]> {
+    const posts = this.postService.getFromSearchImage(file);
 
     return posts;
   }
