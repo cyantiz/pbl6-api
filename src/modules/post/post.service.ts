@@ -313,8 +313,6 @@ export class PostService {
 
     const oids = data?.response ?? [];
 
-    console.log('oids');
-
     const posts = await this.prismaService.post.findMany({
       where: {
         mongoOid: {
