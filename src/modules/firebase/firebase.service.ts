@@ -13,7 +13,6 @@ export class FirebaseService {
   constructor(private config: ConfigService) {
     const bucketName = config.get('firebase.storageBucketName');
 
-    console.log('bucket name', bucketName);
     this.firebaseAdmin = initializeApp();
     this.storageBucket = getStorage().bucket(bucketName);
   }

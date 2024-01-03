@@ -32,6 +32,7 @@ import {
 } from './dto/res.dto';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 import * as FormData from 'form-data';
+import * as fs from 'fs';
 
 @Injectable()
 export class PostService {
@@ -40,7 +41,40 @@ export class PostService {
     private readonly mediaService: MediaService,
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    // this.test();
+  }
+
+  async test() {
+    const posts = await this.prismaService.post.findMany({});
+    const suggestionsJson = fs.readFileSync(
+      '/Users/hoangnhan1203/Downloads/corpus_final.json',
+    );
+    const suggestions = JSON.parse(suggestionsJson.toString());
+
+    console.log('suggestions', suggestions.length);
+    console.log('posts', posts.length);
+
+    const postInSuggestionButNotinPosts = suggestions.filter(
+      (suggestion) =>
+        !posts.find((post) => post.mongoOid === suggestion.object_id),
+    );
+
+    // console.log(
+    //   'postInSuggestionButNotinPosts',
+    //   postInSuggestionButNotinPosts.forEach((missing) => {
+    //     console.log(missing.query.slice(0, 11));
+    //   }),
+    // );
+
+    // save post in suggestion but not in posts to path /Users/hoangnhan1203/Downloads/missing.json
+    fs.writeFileSync(
+      '/Users/hoangnhan1203/Downloads/missing_oid.json',
+      JSON.stringify(
+        postInSuggestionButNotinPosts.map((item) => item.object_id),
+      ),
+    );
+  }
 
   private searchTextUrl = this.configService.get<string>('search.byTextUrl');
   private searchImageUrl = this.configService.get<string>('search.byImageUrl');
@@ -173,8 +207,6 @@ export class PostService {
 
     PaginationHandle(dbQuery, page, pageSize);
 
-    console.log('query', JSON.stringify(dbQuery));
-
     const [count, posts] = await this.prismaService.$transaction([
       this.prismaService.post.count({
         where: dbQuery.where,
@@ -248,12 +280,13 @@ export class PostService {
       throw new BadRequestException('NOT_SPORT_RELEVANT');
     }
 
-    const oids = data?.response ?? [];
+    const titles = data?.response ?? [];
+    console.log('response from ai length', titles.length);
 
     const posts = await this.prismaService.post.findMany({
       where: {
-        mongoOid: {
-          in: oids,
+        title: {
+          in: titles,
         },
       },
       include: {
@@ -269,9 +302,11 @@ export class PostService {
       },
     });
 
-    const sortedPosts = oids.map((oid) => {
-      const foundPost = posts.find((post) => post.mongoOid === oid);
-      if (!foundPost) console.log('NOT FOUND', oid);
+    console.log('pots length', posts.length);
+
+    const sortedPosts = titles.map((title) => {
+      const foundPost = posts.find((post) => post.title === title);
+      if (!foundPost) console.log('NOT FOUND', title);
       return foundPost;
     });
 
@@ -311,12 +346,14 @@ export class PostService {
       throw new BadRequestException('NOT_SPORT_RELEVANT');
     }
 
-    const oids = data?.response ?? [];
+    const titles = data?.response ?? [];
+
+    console.log('response from ai length', titles.length);
 
     const posts = await this.prismaService.post.findMany({
       where: {
-        mongoOid: {
-          in: oids,
+        title: {
+          in: titles,
         },
       },
       include: {
@@ -332,11 +369,13 @@ export class PostService {
       },
     });
 
-    const sortedPosts = oids.map((oid) => {
-      const foundPost = posts.find((post) => post.mongoOid === oid);
-      if (!foundPost) console.log('NOT FOUND', oid);
+    const sortedPosts = titles.map((title) => {
+      const foundPost = posts.find((post) => post.title === title);
+      // if (!foundPost) console.log('NOT FOUND', slug);
       return foundPost;
     });
+
+    console.log('sortedPosts length', sortedPosts.length);
 
     return PlainToInstanceList(ExtendedPostRespDto, sortedPosts);
   }

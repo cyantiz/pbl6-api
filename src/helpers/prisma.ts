@@ -29,7 +29,6 @@ export const getPaginationInfo = (params: {
   page: number;
 }): PaginationRespDto => {
   const { count, pageSize, page } = params;
-  console.log(params);
   const totalPage = Math.ceil(count / +pageSize);
   const nextPage = +page + 1 > totalPage ? null : +page + 1;
 
