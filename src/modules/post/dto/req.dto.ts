@@ -131,16 +131,42 @@ export class GetMyPostsQuery extends PaginationQuery {
   status? = PostStatus.PUBLISHED;
 }
 
-export class SaveReadingProgressDto {
-  @IsNumber()
-  @IsNotEmpty()
+export class ReadPostDto {
+  @IsOptional()
   @Type(() => Number)
+  @IsNumber()
   @Max(100)
   @Min(0)
-  @ApiProperty({ type: Number, required: true })
-  progress: number;
+  @ApiProperty({ type: Number, required: false, nullable: true })
+  percentage: number;
+
+  @IsOptional()
+  @Type(() => String)
+  @IsString()
+  @ApiProperty({ type: String, required: false, nullable: true })
+  IP?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @ApiProperty({ type: Number, required: false, nullable: true })
+  userId?: number;
 }
 
 export class GetPostCommentsQueryDto extends IntersectionType(
   PaginationQuery,
 ) {}
+
+export class GetReadPostsQueryDto extends IntersectionType(PaginationQuery) {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @ApiProperty({ type: Number, required: false, nullable: true })
+  userId?: number;
+
+  @IsOptional()
+  @Type(() => String)
+  @IsString()
+  @ApiProperty({ type: String, required: false, nullable: true })
+  IP?: string;
+}

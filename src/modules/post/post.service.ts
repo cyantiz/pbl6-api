@@ -24,7 +24,11 @@ import {
 import { MediaService } from 'src/modules/media/media.service';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { getPaginationInfo, PaginationHandle } from './../../helpers/prisma';
-import { CreateChangeRequestDto, CreatePostDto } from './dto/req.dto';
+import {
+  CreateChangeRequestDto,
+  CreatePostDto,
+  GetReadPostsQueryDto,
+} from './dto/req.dto';
 import {
   ExtendedPostRespDto,
   PaginatedGetCommentsRespDto,
@@ -870,6 +874,127 @@ export class PostService {
       data: {
         progress,
       },
+    });
+  }
+
+  async readPost(params: {
+    postId: number;
+    percentage?: number;
+    userId?: number;
+    IP?: string;
+  }) {
+    const { percentage, IP, userId, postId } = params;
+
+    if (!userId && !IP) return;
+
+    const query = {
+      where: {
+        postId,
+      },
+    };
+
+    if (userId) {
+      query.where['userId'] = userId;
+    } else {
+      query.where['IP'] = IP;
+    }
+
+    const existed = await this.prismaService.visit.findFirst({
+      ...query,
+    });
+
+    if (existed) {
+      await this.prismaService.visit.update({
+        where: {
+          id: existed.id,
+        },
+        data: {
+          visitAt: new Date(),
+          percentage: percentage ?? undefined,
+        },
+      });
+      return;
+    }
+
+    await this.prismaService.visit.create({
+      data: {
+        percentage: percentage ?? undefined,
+        post: {
+          connect: {
+            id: postId,
+          },
+        },
+        user: userId
+          ? {
+              connect: {
+                id: userId,
+              },
+            }
+          : undefined,
+        IP: userId ? undefined : IP,
+      },
+    });
+  }
+
+  async getReadPosts(query: GetReadPostsQueryDto) {
+    const { IP, userId, page, pageSize } = query;
+
+    if (!userId && !IP) return;
+
+    const visitQuery: Prisma.visitFindManyArgs = {
+      where: {
+        userId: userId ? +userId : undefined,
+        IP: userId ? null : IP,
+      },
+      orderBy: {
+        visitAt: 'desc',
+      },
+      distinct: ['postId'],
+    };
+    PaginationHandle(visitQuery, page, pageSize);
+    const existed = await this.prismaService.visit.findMany(visitQuery);
+
+    console.log('read', existed.length);
+
+    const dbQuery: Prisma.postFindManyArgs = {
+      where: {
+        id: {
+          in: existed.map((visit) => visit.postId),
+        },
+      },
+      include: {
+        author: true,
+        category: true,
+        visits: true,
+        thumbnailMedia: true,
+        post_media: {
+          include: {
+            media: true,
+          },
+        },
+      },
+    };
+
+    PaginationHandle(dbQuery, page, pageSize);
+
+    const [count, posts] = await this.prismaService.$transaction([
+      this.prismaService.post.count({
+        where: dbQuery.where,
+      }),
+      this.prismaService.post.findMany(dbQuery),
+    ]);
+
+    // sort the posts by the order of the ids in existed
+
+    const sortedPosts = existed.map((visit) => {
+      const foundPost = posts.find((post) => post.id === visit.postId);
+      if (!foundPost) console.log('NOT FOUND', visit.postId);
+      return foundPost;
+    });
+
+    return PlainToInstance(PaginatedGetPostsRespDto, {
+      posts: sortedPosts,
+      ...getPaginationInfo({ count, page, pageSize }),
     });
   }
 

@@ -40,7 +40,8 @@ import {
   GetPostCommentsQueryDto,
   GetPostsQuery,
   GetPublishedPostsQuery,
-  SaveReadingProgressDto,
+  GetReadPostsQueryDto,
+  ReadPostDto,
 } from './dto/req.dto';
 import {
   ExtendedPostRespDto,
@@ -326,28 +327,34 @@ export class PostController {
     return result;
   }
 
-  @Post('/:id/save-reading-progress')
+  @Post('/:id/read')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: APISummaries.USER })
   @ApiOkResponse({ type: MessageRespDto })
-  @ApiBearerAuth()
-  @UseGuards(UserGuard)
-  async saveReadingProgress(
+  @ApiOperation({ summary: APISummaries.UNAUTH })
+  async readPost(
     @Param('id', ParseIntPipe) postId: number,
-    @Body() dto: SaveReadingProgressDto,
-    @GetAuthData() authData: AuthData,
+    @Body() dto: ReadPostDto,
   ): Promise<MessageRespDto> {
-    const userId = authData.id;
-    const { progress } = dto;
-
-    await this.postService.saveReadingProgress({
+    console.log('userId', dto.userId);
+    await this.postService.readPost({
       postId,
-      userId,
-      progress,
+      ...dto,
     });
 
     return PlainToInstance(MessageRespDto, {
-      message: 'Saved reading progress successfully',
+      message: 'Saved reading successfully',
     });
+  }
+
+  @Get('/read')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: [ExtendedPostRespDto] })
+  @ApiOperation({ summary: APISummaries.UNAUTH })
+  async getReadPosts(
+    @Query() query: GetReadPostsQueryDto,
+  ): Promise<PaginatedGetPostsRespDto> {
+    const posts = await this.postService.getReadPosts(query);
+
+    return posts;
   }
 }
