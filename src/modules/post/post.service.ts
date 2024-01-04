@@ -28,6 +28,7 @@ import {
   CreateChangeRequestDto,
   CreatePostDto,
   GetReadPostsQueryDto,
+  UpdatePostDto,
 } from './dto/req.dto';
 import {
   ExtendedPostRespDto,
@@ -306,8 +307,6 @@ export class PostService {
       },
     });
 
-    console.log('pots length', posts.length);
-
     const sortedPosts = titles.map((title) => {
       const foundPost = posts.find((post) => post.title === title);
       if (!foundPost) console.log('NOT FOUND', title);
@@ -545,6 +544,76 @@ export class PostService {
     });
 
     return PlainToInstance(ExtendedPostRespDto, post);
+  }
+
+  async update(params: {
+    postId: number;
+    dto: Partial<UpdatePostDto>;
+    thumbnailFile?: Express.Multer.File;
+    authData: {
+      role?: Role;
+      username?: string;
+      userId?: number;
+    };
+  }): Promise<ExtendedPostRespDto> {
+    const { postId, dto, thumbnailFile, authData } = params;
+
+    const post = await this.verifyPermissionToAdjustPost({
+      postId: postId,
+      role: authData.role,
+      userId: authData.userId,
+    });
+
+    const { category } = await this.checkCatSubCat(+dto.categoryId);
+
+    const slug = getSlug(dto.title, '-');
+
+    if (slug !== post.slug) await this.verifyUniqueSlug(slug);
+
+    const thumbnailMedia = thumbnailFile
+      ? await this.mediaService.create({
+          file: thumbnailFile,
+        })
+      : undefined;
+
+    const post_media = thumbnailMedia
+      ? {
+          connect: {
+            id: thumbnailMedia.id,
+          },
+        }
+      : undefined;
+
+    const updatedPost = await this.prismaService.post.update({
+      where: {
+        id: post.id,
+      },
+      data: {
+        title: dto.title,
+        body: dto.body,
+        secondaryText: dto.secondaryText,
+        slug,
+        thumbnailMedia: post_media,
+        category: {
+          connect: pick(category, 'id'),
+        },
+        status: dto.status,
+        updatedAt: new Date(),
+      },
+      include: {
+        author: true,
+        category: true,
+        visits: true,
+        thumbnailMedia: true,
+        post_media: {
+          include: {
+            media: true,
+          },
+        },
+      },
+    });
+
+    return PlainToInstance(ExtendedPostRespDto, updatedPost);
   }
 
   async deletePostById(

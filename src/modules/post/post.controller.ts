@@ -42,6 +42,7 @@ import {
   GetPublishedPostsQuery,
   GetReadPostsQueryDto,
   ReadPostDto,
+  UpdatePostDto,
 } from './dto/req.dto';
 import {
   ExtendedPostRespDto,
@@ -173,12 +174,12 @@ export class PostController {
   @ApiOkResponse({ type: ExtendedPostRespDto })
   @ApiBearerAuth()
   @UseGuards(UserGuard)
-  @Delete('id')
+  @Delete('/:id')
   async deletePostById(
     @Param('id', ParseIntPipe) postId: number,
     @GetAuthData() authData: AuthData,
   ): Promise<MessageRespDto> {
-    await this.postService.deletePostById(postId, {
+    await this.postService.deletePostById(+postId, {
       role: authData.role,
       username: authData.username,
       userId: authData.id,
@@ -335,7 +336,6 @@ export class PostController {
     @Param('id', ParseIntPipe) postId: number,
     @Body() dto: ReadPostDto,
   ): Promise<MessageRespDto> {
-    console.log('userId', dto.userId);
     await this.postService.readPost({
       postId,
       ...dto,
@@ -356,5 +356,31 @@ export class PostController {
     const posts = await this.postService.getReadPosts(query);
 
     return posts;
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: APISummaries.EDITOR })
+  @ApiOkResponse({ type: ExtendedPostRespDto })
+  @ApiBearerAuth()
+  @UseGuards(UserGuard)
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FastifyFileInterceptor('filename'))
+  @Put('/:id')
+  async updatePost(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: UpdatePostDto,
+    @GetAuthData() authData: AuthData,
+    @Param('id', ParseIntPipe) postId: number,
+  ): Promise<ExtendedPostRespDto> {
+    return this.postService.update({
+      postId: +postId,
+      dto,
+      thumbnailFile: file,
+      authData: {
+        role: authData.role,
+        username: authData.username,
+        userId: authData.id,
+      },
+    });
   }
 }

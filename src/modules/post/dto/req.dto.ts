@@ -79,6 +79,8 @@ export class CreatePostDto extends IntersectionType(UploadFileDto) {
   status = PostStatus.PUBLISHED;
 }
 
+export class UpdatePostDto extends IntersectionType(CreatePostDto) {}
+
 export class CreateChangeRequestDto {
   @IsNumber()
   @IsNotEmpty()
