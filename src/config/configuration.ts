@@ -18,6 +18,9 @@ export default () => ({
     byImageUrl:
       process.env.SEARCH_BY_IMAGE_URL ||
       'https://search.sportivefy.info/image-search',
+    addArticleUrl:
+      process.env.SEARCH_ADD_ARTICLE_URL ||
+      'https://search.sportivefy.info/add-article',
   },
   defaultAvatar:
     'https://firebasestorage.googleapis.com/v0/b/pbl6-a7d3b.appspot.com/o/media%2Fdefault%2Fdefault.jpg?alt=media',

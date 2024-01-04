@@ -83,6 +83,9 @@ export class PostService {
 
   private searchTextUrl = this.configService.get<string>('search.byTextUrl');
   private searchImageUrl = this.configService.get<string>('search.byImageUrl');
+  private addArticleUrl = this.configService.get<string>(
+    'search.addArticleUrl',
+  );
 
   private async findCategoryById(categoryId: number): Promise<category> {
     return await this.prismaService.category.findFirst({
@@ -533,6 +536,33 @@ export class PostService {
         publishedAt: dto.status === PostStatus.PUBLISHED ? new Date() : null,
       },
     });
+
+    const thumbnailUrl = await this.mediaService.getMediaUrl(thumbnailMedia.id);
+    console.log(
+      `${this.addArticleUrl}?title=${dto.title}&content=${dto.body}&image_url=${thumbnailUrl}`,
+    );
+    await this.httpService.axiosRef
+      .post(
+        `${this.addArticleUrl}`,
+        {
+          title: dto.title,
+          content: dto.body,
+          image_url: await this.mediaService.getMediaUrl(thumbnailMedia.id),
+        },
+        {
+          params: {
+            title: dto.title,
+            content: dto.body,
+            image_url: await this.mediaService.getMediaUrl(thumbnailMedia.id),
+          },
+        },
+      )
+      .then((res) => {
+        console.log('res', res.data);
+      })
+      .catch((err) => {
+        console.log('err', err);
+      });
 
     const postSubcategories = subcategories.map((subcat) => ({
       postId: post.id,
