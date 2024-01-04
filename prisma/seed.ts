@@ -7,9 +7,7 @@ import {
   seedCategories,
   seedEditors,
   seedMedias,
-  seedModerators,
   seedPosts,
-  seedUsers,
   seedVisits,
 } from './seedData';
 const prisma = new PrismaClient();
@@ -39,7 +37,7 @@ async function main() {
 
   console.log('SEED - Seed accounts');
   await prisma.$transaction(
-    [...seedUsers, ...seedAdmins, ...seedModerators, ...seedEditors].map(
+    [...seedAdmins, ...seedEditors].map(
       (
         {
           email,

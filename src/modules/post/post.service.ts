@@ -38,6 +38,7 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 import * as FormData from 'form-data';
 import * as fs from 'fs';
+import { seedAdmins, seedEditors } from 'prisma/seedData';
 
 @Injectable()
 export class PostService {
@@ -47,7 +48,43 @@ export class PostService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    // this.test();
+    this.abc();
+  }
+
+  async abc() {
+    await this.prismaService.$transaction(
+      [...seedAdmins, ...seedEditors].map(
+        (
+          {
+            email,
+            username,
+            name,
+            role,
+            avatarUrl,
+            password,
+            isVerified,
+            verifiedAt,
+          },
+          index,
+        ) => {
+          return this.prismaService.user.upsert({
+            where: { id: index + 1 },
+            update: {},
+            create: {
+              id: index + 1,
+              email,
+              username,
+              name,
+              role,
+              avatarUrl,
+              password,
+              isVerified,
+              verifiedAt,
+            },
+          });
+        },
+      ),
+    );
   }
 
   async test() {
