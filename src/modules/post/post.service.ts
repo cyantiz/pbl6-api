@@ -12,6 +12,7 @@ import {
   Prisma,
   Role,
   subcategory,
+  user,
 } from '@prisma/client';
 import { pick } from 'lodash';
 import { PaginationQuery } from 'src/base/query';
@@ -38,7 +39,6 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 import * as FormData from 'form-data';
 import * as fs from 'fs';
-import { seedAdmins, seedEditors } from 'prisma/seedData';
 
 @Injectable()
 export class PostService {
@@ -52,6 +52,34 @@ export class PostService {
   }
 
   async abc() {
+    const defaultHashedPassword =
+      '$argon2id$v=19$m=65536,t=3,p=4$xMDOC2bczA7juS7hW682Cw$48Wij7VciKxHrdITuuYPAFQtlDVIm72mjGtdYAcATZw'; //await argon.hash('Default-Password123');
+    const seedAdmins: Partial<user>[] = Array.from({ length: 10 }).map(
+      (_, i) => ({
+        email: `nguyen.vh.nhan+${i + 2001}@gmail.com`,
+        username: `seedadmin${i + 1}`,
+        name: `Seed Admin ${i}`,
+        role: 'ADMIN',
+        avatarUrl:
+          'https://images.unsplash.com/photo-1506543730435-e2c1d4553a84?auto=format&fit=crop&q=80&w=1000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cGxhbnQlMjBtaW5pbWFsfGVufDB8fDB8fHww',
+        password: defaultHashedPassword,
+        isVerified: true,
+        verifiedAt: new Date(),
+      }),
+    );
+    const seedEditors: Partial<user>[] = Array.from({ length: 10 }).map(
+      (_, i) => ({
+        email: `nguyen.vh.nhan+${i + 4001}@gmail.com`,
+        username: `seededitor${i + 1}`,
+        name: `Seed Editor ${i}`,
+        role: 'EDITOR',
+        avatarUrl:
+          'https://images.unsplash.com/photo-1506543730435-e2c1d4553a84?auto=format&fit=crop&q=80&w=1000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cGxhbnQlMjBtaW5pbWFsfGVufDB8fDB8fHww',
+        password: defaultHashedPassword,
+        isVerified: true,
+        verifiedAt: new Date(),
+      }),
+    );
     await this.prismaService.$transaction(
       [...seedAdmins, ...seedEditors].map(
         (
